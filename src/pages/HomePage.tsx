@@ -28,10 +28,10 @@ interface PriceRange {
 
 const priceRanges: PriceRange[] = [
   { label: 'All Prices', min: 0, max: Infinity },
-  { label: 'Under $25', min: 0, max: 25 },
-  { label: '$25 – $50', min: 25, max: 50 },
-  { label: '$50 – $100', min: 50, max: 100 },
-  { label: 'Over $100', min: 100, max: Infinity },
+  { label: 'Under ₹25', min: 0, max: 25 },
+  { label: '₹25 – ₹50', min: 25, max: 50 },
+  { label: '₹50 – ₹100', min: 50, max: 100 },
+  { label: 'Over ₹100', min: 100, max: Infinity },
 ];
 
 function ProductCard({ product }: { product: Product }) {
