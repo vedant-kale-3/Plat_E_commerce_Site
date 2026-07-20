@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { findUser } from '../data/mockUsers';
 
 type Mode = 'login' | 'register';
 
@@ -15,6 +16,7 @@ interface Errors {
   name?: string;
   email?: string;
   password?: string;
+  auth?: string;
 }
 
 export default function AuthPage() {
@@ -34,8 +36,8 @@ export default function AuthPage() {
     if (!form.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
       newErrors.email = 'Enter a valid email address.';
     }
-    if (form.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters.';
+    if (form.password.length === 0) {
+      newErrors.password = 'Password is required.';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -44,16 +46,59 @@ export default function AuthPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+
+    if (mode === 'login') {
+      const user = findUser(form.email, form.password);
+      if (!user) {
+        const existing = [1, 2, 3];
+        void existing;
+        const known = ['Example@gmail.com', 'admin@gmail.com', 'Customer@gmail.com']
+          .some(e => e.toLowerCase() === form.email.toLowerCase().trim());
+        setErrors({
+          auth: known
+            ? 'Wrong password. Please try again.'
+            : 'Account does not exist. Please check your email or sign up.',
+        });
+        return;
+      }
+
+      setErrors({});
+      setSuccess(true);
+      setTimeout(() => {
+        setUserSession({
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          address: user.address,
+          joined: user.joined,
+          orders: user.orders,
+        });
+        navigate('/');
+      }, 900);
+      return;
+    }
+
     setSuccess(true);
     setTimeout(() => {
-      setUserSession({ name: form.name || form.email.split('@')[0], email: form.email });
+      setUserSession({
+        name: form.name || form.email.split('@')[0],
+        email: form.email,
+        firstName: form.name.split(' ')[0] || form.email.split('@')[0],
+        lastName: form.name.split(' ')[1] || '',
+        phone: '',
+        address: { street: '', city: '', state: '', zip: '', country: '' },
+        joined: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        orders: [],
+      });
       navigate('/');
     }, 900);
   };
 
   const handleChange = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
+    if (errors[field] || errors.auth) setErrors(prev => ({ ...prev, [field]: undefined, auth: undefined }));
   };
 
   const switchMode = () => {
@@ -150,6 +195,14 @@ export default function AuthPage() {
             <span className="text-xs text-gray-400 font-medium">or continue with email</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
+
+          {/* Auth error banner */}
+          {errors.auth && (
+            <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+              <AlertCircle size={16} className="text-red-500 shrink-0" />
+              <p className="text-sm text-red-600">{errors.auth}</p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">

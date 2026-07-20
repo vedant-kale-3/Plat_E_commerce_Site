@@ -21,6 +21,18 @@ export interface CartItem extends Product {
 export interface UserSession {
   name: string;
   email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  joined: string;
+  orders: import('../data/mockUsers').Order[];
 }
 
 interface AppContextType {
