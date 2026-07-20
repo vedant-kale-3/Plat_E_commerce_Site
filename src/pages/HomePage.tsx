@@ -192,24 +192,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Floating plant cards */}
-        <div className="absolute right-12 top-1/2 -translate-y-1/2 hidden xl:flex flex-col gap-4 z-10">
-          {[
-            { img: '/A_image_12_75a15381-4701-4eca-a435-ce855c9437cb.jpg', name: 'Swiss Cheese Vine', price: '₹24.99' },
-            { img: '/netted-ficus-tree-32169816686724.jpg', name: 'Netted Ficus', price: '₹89.99' },
-          ].map(card => (
-            <div
-              key={card.name}
-              className="flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-4 py-3 text-white"
-            >
-              <img src={card.img} alt={card.name} className="w-12 h-12 rounded-xl object-cover" />
-              <div>
-                <div className="text-sm font-medium">{card.name}</div>
-                <div className="text-forest-300 text-sm">{card.price}</div>
-              </div>
-            </div>
-          ))}
-        </div>
+
       </section>
 
       {/* Feature strip */}
