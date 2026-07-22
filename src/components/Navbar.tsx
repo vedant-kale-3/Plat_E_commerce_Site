@@ -1,22 +1,11 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Search, Menu, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ShoppingCart, User, Menu, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function Navbar() {
   const { cartCount, userSession } = useApp();
-  const [searchQuery, setSearchQuery] = useState('');
   const [mobileOpen, setMobileOpen] = useState(false);
-  const navigate = useNavigate();
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-      setMobileOpen(false);
-    }
-  };
 
   const navLinks = [
     { label: 'Shop', to: '/#shop' },
@@ -50,20 +39,6 @@ export default function Navbar() {
               </Link>
             ))}
           </div>
-
-          {/* Search bar */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center">
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-forest-500 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search plants..."
-                className="pl-9 pr-4 py-2 text-sm bg-forest-50 border border-forest-200 rounded-xl w-52 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-transparent text-forest-800 placeholder-forest-400 transition-all"
-              />
-            </div>
-          </form>
 
           {/* Icons */}
           <div className="flex items-center gap-2">
@@ -103,18 +78,6 @@ export default function Navbar() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden border-t border-forest-100 bg-white/95 backdrop-blur-md px-4 pb-4 pt-3 space-y-1">
-          <form onSubmit={handleSearch} className="mb-3">
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-forest-500 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search plants..."
-                className="pl-9 pr-4 py-2.5 text-sm bg-forest-50 border border-forest-200 rounded-xl w-full focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-transparent text-forest-800 placeholder-forest-400"
-              />
-            </div>
-          </form>
           {navLinks.map(link => (
             <Link
               key={link.label}

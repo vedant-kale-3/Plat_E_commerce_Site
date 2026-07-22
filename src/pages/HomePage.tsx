@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingCart,
   SlidersHorizontal,
@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Recycle,
   Headphones,
+  Search,
 } from 'lucide-react';
 import { products } from '../data/products';
 import { useApp } from '../context/AppContext';
@@ -111,9 +112,10 @@ export default function HomePage() {
   const [sizeFilter, setSizeFilter] = useState<SizeFilter>('All');
   const [priceRangeIdx, setPriceRangeIdx] = useState(0);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
   const shopRef = useRef<HTMLDivElement>(null);
-  const [searchParams] = useSearchParams();
-  const searchQuery = searchParams.get('search')?.toLowerCase() || '';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = (searchParams.get('search') || searchInput).toLowerCase().trim();
 
   const filtered = useMemo(() => {
     const range = priceRanges[priceRangeIdx];
@@ -130,10 +132,19 @@ export default function HomePage() {
     setLightFilter('All');
     setSizeFilter('All');
     setPriceRangeIdx(0);
+    setSearchInput('');
+    setSearchParams({}, { replace: true });
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchInput.trim();
+    setSearchParams(q ? { search: q } : {}, { replace: true });
+    shopRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const activeFilters =
-    (lightFilter !== 'All' ? 1 : 0) + (sizeFilter !== 'All' ? 1 : 0) + (priceRangeIdx !== 0 ? 1 : 0);
+    (lightFilter !== 'All' ? 1 : 0) + (sizeFilter !== 'All' ? 1 : 0) + (priceRangeIdx !== 0 ? 1 : 0) + (searchQuery ? 1 : 0);
 
   return (
     <div>
@@ -265,6 +276,23 @@ export default function HomePage() {
                   </button>
                 )}
               </div>
+
+              {/* Search */}
+              <form onSubmit={handleSearch}>
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-forest-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchInput}
+                    onChange={e => {
+                      setSearchInput(e.target.value);
+                      setSearchParams(e.target.value.trim() ? { search: e.target.value.trim() } : {}, { replace: true });
+                    }}
+                    placeholder="Search plants..."
+                    className="w-full pl-9 pr-4 py-2.5 text-sm bg-forest-50 border border-forest-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest-400 focus:border-transparent text-forest-800 placeholder-forest-400 transition-all"
+                  />
+                </div>
+              </form>
 
               {/* Light */}
               <div>
