@@ -1,150 +1,93 @@
-import { useState, useMemo, useRef } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
-  ShoppingCart,
-  SlidersHorizontal,
-  ChevronDown,
-  CheckCircle2,
+  ArrowRight,
   ArrowDown,
   Star,
   Truck,
   ShieldCheck,
   Recycle,
   Headphones,
-  Search,
+  Leaf,
+  Sprout,
+  Heart,
+  Quote,
 } from 'lucide-react';
 import { products } from '../data/products';
-import { useApp } from '../context/AppContext';
+import ProductCard from '../components/ProductCard';
 import StarRating from '../components/StarRating';
-import type { Product } from '../context/AppContext';
 
-type LightFilter = 'All' | 'Low Light' | 'Bright Indirect';
-type SizeFilter = 'All' | 'Small' | 'Medium' | 'Large';
-
-interface PriceRange {
-  label: string;
-  min: number;
-  max: number;
-}
-
-const priceRanges: PriceRange[] = [
-  { label: 'All Prices', min: 0, max: Infinity },
-  { label: 'Under ₹25', min: 0, max: 25 },
-  { label: '₹25 – ₹50', min: 25, max: 50 },
-  { label: '₹50 – ₹100', min: 50, max: 100 },
-  { label: 'Over ₹100', min: 100, max: Infinity },
+const values = [
+  {
+    icon: Sprout,
+    title: 'Hand-Grown & Hand-Picked',
+    desc: 'Every plant is nurtured from seedling to shipping day by our small team of growers. No mass production, just careful cultivation.',
+  },
+  {
+    icon: Recycle,
+    title: 'Sustainable to the Roots',
+    desc: 'Biodegradable pots, recycled-paper sleeves, and carbon-neutral shipping. We leave the planet greener than we found it.',
+  },
+  {
+    icon: Heart,
+    title: 'Plants That Thrive, Guaranteed',
+    desc: 'If your plant doesn’t make it 30 days, we replace it free. We care about your plant’s life as much as you do.',
+  },
 ];
 
-function ProductCard({ product }: { product: Product }) {
-  const { addToCart } = useApp();
-  const [added, setAdded] = useState(false);
+const stats = [
+  { value: '10,000+', label: 'Happy plant parents' },
+  { value: '50+', label: 'Curated varieties' },
+  { value: '4.9/5', label: 'Average rating' },
+  { value: '5 yrs', label: 'Bringing green home' },
+];
 
-  const handleAdd = () => {
-    addToCart(product);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1400);
-  };
-
-  return (
-    <div className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-all duration-300 overflow-hidden flex flex-col">
-      <Link to={`/product/${product.id}`} className="relative overflow-hidden block">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-        />
-        {product.tag && (
-          <span className="absolute top-3 left-3 px-2.5 py-1 bg-forest-800 text-white text-xs font-semibold rounded-full">
-            {product.tag}
-          </span>
-        )}
-        <span className="absolute top-3 right-3 px-2.5 py-1 bg-white/90 text-forest-700 text-xs font-medium rounded-full capitalize">
-          {product.size}
-        </span>
-      </Link>
-
-      <div className="p-4 flex flex-col flex-1">
-        <div className="mb-1">
-          <span className="text-xs text-forest-500 font-medium uppercase tracking-wide">{product.category}</span>
-        </div>
-        <Link to={`/product/${product.id}`}>
-          <h3 className="font-semibold text-forest-800 text-base mb-1 hover:text-forest-600 transition-colors leading-tight">
-            {product.name}
-          </h3>
-        </Link>
-        <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 mb-3">{product.description}</p>
-
-        <div className="mb-3">
-          <StarRating rating={product.rating} reviewCount={product.reviewCount} />
-        </div>
-
-        <div className="mt-auto flex items-center justify-between gap-3">
-          <span className="text-lg font-bold text-forest-800">₹{product.price.toFixed(2)}</span>
-          <button
-            onClick={handleAdd}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
-              added
-                ? 'bg-forest-500 text-white'
-                : 'bg-forest-100 text-forest-800 hover:bg-forest-800 hover:text-white'
-            }`}
-          >
-            {added ? (
-              <>
-                <CheckCircle2 size={16} />
-                Added
-              </>
-            ) : (
-              <>
-                <ShoppingCart size={16} />
-                Add to Cart
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const reviews = [
+  {
+    name: 'Maya Chen',
+    location: 'Chicago, IL',
+    rating: 5,
+    text: 'My Monstera arrived in perfect condition — the packaging was beautiful and completely plastic-free. The care guide actually helped me keep it alive, which is a first for me!',
+    avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop',
+  },
+  {
+    name: 'Jake Amiri',
+    location: 'San Francisco, CA',
+    rating: 5,
+    text: 'Ordered three plants and every single one was healthier than anything I’ve seen at the local nursery. The Bird of Paradise is now the centerpiece of my living room.',
+    avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop',
+  },
+  {
+    name: 'Priya Nair',
+    location: 'Austin, TX',
+    rating: 5,
+    text: 'The support team answered my questions within hours and helped me pick plants for my low-light apartment. My ZZ plant is thriving six months later. Truly a company that cares.',
+    avatar: 'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop',
+  },
+  {
+    name: 'Daniel Osei',
+    location: 'Portland, OR',
+    rating: 4.5,
+    text: 'The netted ficus is a sculptural work of art. I get compliments on it constantly. Shipping was a day late but the plant was pristine. Will be a customer for life.',
+    avatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop',
+  },
+  {
+    name: 'Sofia Marchetti',
+    location: 'Brooklyn, NY',
+    rating: 5,
+    text: 'I’m a notorious plant killer and even I haven’t managed to kill the Pothos I ordered. The beginner-friendly labels on the site made choosing painless. Thank you, Fiona!',
+    avatar: 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop',
+  },
+  {
+    name: 'Liam Foster',
+    location: 'Seattle, WA',
+    rating: 5,
+    text: 'The whole experience felt personal — from the handwritten note in the box to the follow-up email checking on my plant. This is how every online shop should feel.',
+    avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop',
+  },
+];
 
 export default function HomePage() {
-  const [lightFilter, setLightFilter] = useState<LightFilter>('All');
-  const [sizeFilter, setSizeFilter] = useState<SizeFilter>('All');
-  const [priceRangeIdx, setPriceRangeIdx] = useState(0);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [searchInput, setSearchInput] = useState('');
-  const shopRef = useRef<HTMLDivElement>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const searchQuery = (searchParams.get('search') || searchInput).toLowerCase().trim();
-
-  const filtered = useMemo(() => {
-    const range = priceRanges[priceRangeIdx];
-    return products.filter(p => {
-      if (lightFilter !== 'All' && p.light !== lightFilter) return false;
-      if (sizeFilter !== 'All' && p.size !== sizeFilter) return false;
-      if (p.price < range.min || p.price > range.max) return false;
-      if (searchQuery && !p.name.toLowerCase().includes(searchQuery) && !p.category.toLowerCase().includes(searchQuery)) return false;
-      return true;
-    });
-  }, [lightFilter, sizeFilter, priceRangeIdx, searchQuery]);
-
-  const clearFilters = () => {
-    setLightFilter('All');
-    setSizeFilter('All');
-    setPriceRangeIdx(0);
-    setSearchInput('');
-    setSearchParams({}, { replace: true });
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = searchInput.trim();
-    setSearchParams(q ? { search: q } : {}, { replace: true });
-    shopRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const activeFilters =
-    (lightFilter !== 'All' ? 1 : 0) + (sizeFilter !== 'All' ? 1 : 0) + (priceRangeIdx !== 0 ? 1 : 0) + (searchQuery ? 1 : 0);
+  const featured = products.slice(0, 3);
 
   return (
     <div>
@@ -169,22 +112,23 @@ export default function HomePage() {
               Indoors
             </h1>
             <p className="text-lg text-forest-200/80 leading-relaxed mb-10 max-w-lg">
-              Hand-selected plants delivered fresh to your door. Transform your living space with living art — curated by plant experts, loved by thousands.
+              We’re Fiona — a small studio on a mission to make homes greener, one thoughtfully grown plant at a time. Curated by growers, loved by thousands.
             </p>
             <div className="flex flex-wrap gap-4">
-              <button
-                onClick={() => shopRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              <Link
+                to="/shop"
                 className="inline-flex items-center gap-2 px-7 py-3.5 bg-forest-500 hover:bg-forest-400 text-white font-medium rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 text-base"
               >
                 Shop Plants
-                <ArrowDown size={18} />
-              </button>
-              <Link
-                to="/auth"
+                <ArrowRight size={18} />
+              </Link>
+              <a
+                href="#story"
                 className="inline-flex items-center gap-2 px-7 py-3.5 border border-white/30 text-white hover:bg-white/10 font-medium rounded-2xl transition-all text-base"
               >
-                Join Fiona
-              </Link>
+                Our Story
+                <ArrowDown size={18} />
+              </a>
             </div>
 
             {/* Trust badges */}
@@ -202,8 +146,6 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-
-
       </section>
 
       {/* Feature strip */}
@@ -230,159 +172,193 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Shop section */}
-      <section id="shop" ref={shopRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
-          <div>
-            <h2 className="text-3xl font-semibold text-forest-800">
-              {searchQuery ? `Results for "${searchQuery}"` : 'Our Plants'}
-            </h2>
-            <p className="text-gray-500 mt-1 text-sm">
-              {filtered.length} plant{filtered.length !== 1 ? 's' : ''} available
-            </p>
-          </div>
-
-          {/* Mobile filter toggle */}
-          <button
-            onClick={() => setFilterOpen(s => !s)}
-            className="sm:hidden flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-forest-700 bg-white hover:bg-forest-50 transition-colors"
-          >
-            <SlidersHorizontal size={16} />
-            Filters
-            {activeFilters > 0 && (
-              <span className="w-5 h-5 bg-forest-500 text-white text-xs rounded-full flex items-center justify-center">
-                {activeFilters}
-              </span>
-            )}
-          </button>
-        </div>
-
-        <div className="flex gap-8">
-          {/* Sidebar filters */}
-          <aside
-            className={`${
-              filterOpen ? 'block' : 'hidden'
-            } sm:block w-full sm:w-56 lg:w-64 shrink-0`}
-          >
-            <div className="bg-white rounded-2xl shadow-card p-6 sticky top-24 space-y-7">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-forest-800 text-sm">Filters</h3>
-                {activeFilters > 0 && (
-                  <button
-                    onClick={clearFilters}
-                    className="text-xs text-forest-500 hover:text-forest-700 font-medium transition-colors"
-                  >
-                    Clear all
-                  </button>
-                )}
+      {/* Our Story */}
+      <section id="story" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="relative">
+            <div className="rounded-3xl overflow-hidden shadow-card">
+              <img
+                src="/A_image_10_06ce6eee-f675-41b8-b461-efb57f8c42a2.webp"
+                alt="A greenhouse full of healthy plants"
+                className="w-full h-[460px] object-cover"
+              />
+            </div>
+            <div className="absolute -bottom-6 -right-2 sm:right-6 bg-white rounded-2xl shadow-card-hover p-5 flex items-center gap-4 max-w-[230px]">
+              <div className="w-12 h-12 bg-forest-100 rounded-xl flex items-center justify-center shrink-0">
+                <Leaf size={24} className="text-forest-600" />
               </div>
-
-              {/* Search */}
-              <form onSubmit={handleSearch}>
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-forest-500 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchInput}
-                    onChange={e => {
-                      setSearchInput(e.target.value);
-                      setSearchParams(e.target.value.trim() ? { search: e.target.value.trim() } : {}, { replace: true });
-                    }}
-                    placeholder="Search plants..."
-                    className="w-full pl-9 pr-4 py-2.5 text-sm bg-forest-50 border border-forest-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest-400 focus:border-transparent text-forest-800 placeholder-forest-400 transition-all"
-                  />
-                </div>
-              </form>
-
-              {/* Light */}
               <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Light Needs</h4>
-                <div className="space-y-2">
-                  {(['All', 'Low Light', 'Bright Indirect'] as LightFilter[]).map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => setLightFilter(opt)}
-                      className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between ${
-                        lightFilter === opt
-                          ? 'bg-forest-800 text-white font-medium'
-                          : 'text-forest-700 hover:bg-forest-50'
-                      }`}
-                    >
-                      {opt}
-                      {lightFilter === opt && <CheckCircle2 size={14} />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Size */}
-              <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Plant Size</h4>
-                <div className="space-y-2">
-                  {(['All', 'Small', 'Medium', 'Large'] as SizeFilter[]).map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => setSizeFilter(opt)}
-                      className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between ${
-                        sizeFilter === opt
-                          ? 'bg-forest-800 text-white font-medium'
-                          : 'text-forest-700 hover:bg-forest-50'
-                      }`}
-                    >
-                      {opt}
-                      {sizeFilter === opt && <CheckCircle2 size={14} />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price */}
-              <div>
-                <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Price Range</h4>
-                <div className="space-y-2">
-                  {priceRanges.map((range, idx) => (
-                    <button
-                      key={range.label}
-                      onClick={() => setPriceRangeIdx(idx)}
-                      className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between ${
-                        priceRangeIdx === idx
-                          ? 'bg-forest-800 text-white font-medium'
-                          : 'text-forest-700 hover:bg-forest-50'
-                      }`}
-                    >
-                      {range.label}
-                      {priceRangeIdx === idx && <CheckCircle2 size={14} />}
-                    </button>
-                  ))}
-                </div>
+                <div className="text-sm font-semibold text-forest-800">Grown with care</div>
+                <div className="text-xs text-gray-500 mt-0.5">No pesticides, ever</div>
               </div>
             </div>
-          </aside>
-
-          {/* Product grid */}
-          <div className="flex-1">
-            {filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 text-center">
-                <div className="w-16 h-16 bg-forest-100 rounded-2xl flex items-center justify-center mb-4">
-                  <SlidersHorizontal size={28} className="text-forest-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-forest-800 mb-2">No plants found</h3>
-                <p className="text-sm text-gray-500 mb-5">Try adjusting your filters or clearing them to see more results.</p>
-                <button
-                  onClick={clearFilters}
-                  className="px-5 py-2.5 bg-forest-800 text-white text-sm font-medium rounded-xl hover:bg-forest-700 transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filtered.map(product => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
           </div>
+
+          <div>
+            <span className="text-xs font-semibold text-forest-500 uppercase tracking-widest mb-3 block">Our Story</span>
+            <h2 className="text-3xl sm:text-4xl font-semibold text-forest-800 leading-tight mb-5">
+              A tiny greenhouse with a big dream
+            </h2>
+            <div className="space-y-4 text-gray-600 leading-relaxed">
+              <p>
+                Fiona started in 2019 as a single backyard greenhouse in Portland, where our founder Elena spent her evenings rescuing neglected houseplants. What began as a passion project quickly grew into a belief: that everyone deserves to live with plants, and that plants deserve to be grown and shipped with real care.
+              </p>
+              <p>
+                Today we’re a small team of growers, designers, and plant-whisperers. We don’t sell thousands of varieties — we grow fifty, and we grow them properly. Every plant is health-checked by hand, packed in plastic-free materials, and backed by a guarantee most nurseries won’t offer.
+              </p>
+              <p>
+                We believe a plant isn’t a product — it’s the start of a calmer, greener home. That’s why we pair every order with a real care guide and a team you can actually talk to.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-4 mt-8">
+              <Link
+                to="/shop"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-forest-800 hover:bg-forest-700 text-white text-sm font-medium rounded-xl transition-colors"
+              >
+                Explore our plants
+                <ArrowRight size={16} />
+              </Link>
+              <Link
+                to="/auth"
+                className="inline-flex items-center gap-2 px-6 py-3 border border-forest-200 text-forest-800 hover:bg-forest-50 text-sm font-medium rounded-xl transition-colors"
+              >
+                Join the community
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats band */}
+      <section className="bg-forest-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+            {stats.map(s => (
+              <div key={s.label} className="text-center">
+                <div className="text-3xl sm:text-4xl font-semibold text-forest-300">{s.value}</div>
+                <div className="text-xs text-forest-400 mt-1.5 uppercase tracking-wide">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Values */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="text-xs font-semibold text-forest-500 uppercase tracking-widest mb-3 block">What we stand for</span>
+          <h2 className="text-3xl sm:text-4xl font-semibold text-forest-800 leading-tight">
+            More than a plant shop
+          </h2>
+          <p className="text-gray-500 mt-4 leading-relaxed">
+            Three principles guide everything we grow, pack, and ship.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {values.map(({ icon: Icon, title, desc }) => (
+            <div
+              key={title}
+              className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover p-8 transition-all duration-300 border border-gray-50"
+            >
+              <div className="w-14 h-14 bg-forest-100 rounded-2xl flex items-center justify-center mb-5 group-hover:bg-forest-500 transition-colors">
+                <Icon size={26} className="text-forest-600 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="font-semibold text-forest-800 text-lg mb-3">{title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Featured plants */}
+      <section className="bg-forest-50 border-y border-forest-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <div>
+              <span className="text-xs font-semibold text-forest-500 uppercase tracking-widest mb-3 block">Best Sellers</span>
+              <h2 className="text-3xl sm:text-4xl font-semibold text-forest-800 leading-tight">
+                Loved by our community
+              </h2>
+            </div>
+            <Link
+              to="/shop"
+              className="inline-flex items-center gap-2 text-sm font-medium text-forest-700 hover:text-forest-500 transition-colors"
+            >
+              View all plants
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featured.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Customer reviews */}
+      <section id="reviews" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="text-xs font-semibold text-forest-500 uppercase tracking-widest mb-3 block">Customer love</span>
+          <h2 className="text-3xl sm:text-4xl font-semibold text-forest-800 leading-tight">
+            10,000+ thriving homes
+          </h2>
+          <div className="flex items-center justify-center gap-2 mt-5">
+            <StarRating rating={4.9} size={18} />
+            <span className="text-sm text-gray-500">4.9 out of 5 from 2,300+ reviews</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {reviews.map(r => (
+            <div
+              key={r.name}
+              className="bg-white rounded-2xl shadow-card hover:shadow-card-hover p-7 flex flex-col transition-all duration-300"
+            >
+              <Quote size={28} className="text-forest-200 mb-4" />
+              <p className="text-sm text-gray-600 leading-relaxed flex-1">{r.text}</p>
+              <div className="mt-5 pt-5 border-t border-gray-100 flex items-center gap-3">
+                <img
+                  src={r.avatar}
+                  alt={r.name}
+                  className="w-11 h-11 rounded-full object-cover"
+                  loading="lazy"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-forest-800">{r.name}</div>
+                  <div className="text-xs text-gray-400">{r.location}</div>
+                </div>
+                <StarRating rating={r.rating} size={13} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA band */}
+      <section className="bg-forest-800 relative overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-15"
+          style={{ backgroundImage: "url('/1_69c03517-6f5a-4f05-baa1-06df9db2c9d2.jpg')" }}
+        />
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <Leaf size={32} className="text-forest-400 mx-auto mb-5" />
+          <h2 className="text-3xl sm:text-4xl font-light text-white leading-tight mb-4">
+            Ready to bring a little{' '}
+            <span className="font-semibold text-forest-300">green</span> home?
+          </h2>
+          <p className="text-forest-200/80 mb-8 max-w-lg mx-auto leading-relaxed">
+            Browse our hand-curated collection and find a plant that fits your space, your light, and your life.
+          </p>
+          <Link
+            to="/shop"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-forest-500 hover:bg-forest-400 text-white font-medium rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 text-base"
+          >
+            Start shopping
+            <ArrowRight size={18} />
+          </Link>
         </div>
       </section>
 

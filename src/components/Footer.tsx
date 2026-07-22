@@ -35,10 +35,17 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Shop</h4>
             <ul className="space-y-2.5">
-              {['All Plants', 'Low Light Plants', 'Hanging Plants', 'Succulents', 'Trees & Large Plants', 'Plant Bundles'].map(item => (
-                <li key={item}>
-                  <Link to="/" className="text-sm text-forest-300 hover:text-forest-100 transition-colors">
-                    {item}
+              {[
+                { label: 'All Plants', to: '/shop' },
+                { label: 'Low Light Plants', to: '/shop' },
+                { label: 'Hanging Plants', to: '/shop' },
+                { label: 'Succulents', to: '/shop' },
+                { label: 'Trees & Large Plants', to: '/shop' },
+                { label: 'Plant Bundles', to: '/shop' },
+              ].map(item => (
+                <li key={item.label}>
+                  <Link to={item.to} className="text-sm text-forest-300 hover:text-forest-100 transition-colors">
+                    {item.label}
                   </Link>
                 </li>
               ))}

@@ -8,10 +8,10 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
-    { label: 'Shop', to: '/#shop' },
-    { label: 'Collections', to: '/' },
+    { label: 'Shop', to: '/shop' },
+    { label: 'About', to: '/#story' },
+    { label: 'Reviews', to: '/#reviews' },
     { label: 'Care Guide', to: '/' },
-    { label: 'About', to: '/' },
   ];
 
   return (
