@@ -11,7 +11,7 @@ export default function Navbar() {
     { label: 'Shop', to: '/shop' },
     { label: 'About', to: '/#story' },
     { label: 'Reviews', to: '/#reviews' },
-    { label: 'Care Guide', to: '/' },
+    { label: 'Care Guide', to: '/care-guide' },
   ];
 
   return (

@@ -3,6 +3,7 @@ import { AppProvider } from './context/AppContext';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
+import CareGuidePage from './pages/CareGuidePage';
 import AuthPage from './pages/AuthPage';
 import CartPage from './pages/CartPage';
 import ProductDetailPage from './pages/ProductDetailPage';
@@ -17,6 +18,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/shop" element={<ShopPage />} />
+            <Route path="/care-guide" element={<CareGuidePage />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/cart" element={<CartPage />} />
             <Route path="/product/:id" element={<ProductDetailPage />} />
