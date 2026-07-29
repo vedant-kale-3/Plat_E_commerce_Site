@@ -25,6 +25,15 @@ export default {
         card: '0 4px 24px rgba(27, 67, 50, 0.08)',
         'card-hover': '0 8px 40px rgba(27, 67, 50, 0.16)',
       },
+      animation: {
+        'scroll-x': 'scroll-x linear infinite',
+      },
+      keyframes: {
+        'scroll-x': {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-33.333%)' },
+        },
+      },
       borderRadius: {
         '2xl': '1rem',
         '3xl': '1.5rem',

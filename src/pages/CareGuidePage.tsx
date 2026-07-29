@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -30,6 +30,7 @@ const difficultyStyles: Record<PlantGuide['difficulty'], string> = {
 export default function CareGuidePage() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [openIssue, setOpenIssue] = useState<number | null>(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const categories = ['All', ...plantGuides.map(g => g.category)];
   const filteredGuides =
@@ -132,61 +133,71 @@ export default function CareGuidePage() {
             ))}
           </div>
 
-          {/* Guide cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGuides.map(guide => (
-              <div
-                key={guide.category}
-                className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover overflow-hidden transition-all duration-300 flex flex-col"
-              >
-                <div className="relative overflow-hidden h-44">
-                  <img
-                    src={guide.image}
-                    alt={guide.category}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    loading="lazy"
-                  />
-                  <span
-                    className={`absolute top-3 right-3 px-2.5 py-1 text-xs font-semibold rounded-full ${difficultyStyles[guide.difficulty]}`}
-                  >
-                    {guide.difficulty}
-                  </span>
-                </div>
+          {/* Infinite horizontal scroll strip */}
+          <div className="relative overflow-hidden">
+            {/* fade edges */}
+            <div className="pointer-events-none absolute left-0 top-0 h-full w-16 bg-gradient-to-r from-forest-50 to-transparent z-10" />
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-forest-50 to-transparent z-10" />
 
-                <div className="p-6 flex flex-col flex-1">
-                  <h3 className="font-semibold text-forest-800 text-lg mb-2">{guide.category} Plants</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed mb-4">{guide.summary}</p>
-
-                  <div className="flex flex-wrap gap-3 mb-4">
-                    <span className="inline-flex items-center gap-1.5 text-xs text-forest-700 bg-forest-50 px-2.5 py-1.5 rounded-lg">
-                      <Sun size={13} />
-                      {guide.light}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 text-xs text-forest-700 bg-forest-50 px-2.5 py-1.5 rounded-lg">
-                      <Droplets size={13} />
-                      {guide.water}
+            <div
+              ref={scrollRef}
+              className="flex gap-6 w-max animate-scroll-x hover:[animation-play-state:paused]"
+              style={{ animationDuration: `${filteredGuides.length * 8}s` }}
+            >
+              {[...filteredGuides, ...filteredGuides, ...filteredGuides].map((guide, idx) => (
+                <div
+                  key={`${guide.category}-${idx}`}
+                  className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover overflow-hidden transition-all duration-300 flex flex-col w-[320px] shrink-0"
+                >
+                  <div className="relative overflow-hidden h-44">
+                    <img
+                      src={guide.image}
+                      alt={guide.category}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                    <span
+                      className={`absolute top-3 right-3 px-2.5 py-1 text-xs font-semibold rounded-full ${difficultyStyles[guide.difficulty]}`}
+                    >
+                      {guide.difficulty}
                     </span>
                   </div>
 
-                  <ul className="space-y-2 mb-5">
-                    {guide.tips.map(tip => (
-                      <li key={tip} className="flex gap-2.5 text-sm text-gray-500 leading-relaxed">
-                        <CheckCircle2 size={15} className="text-forest-400 shrink-0 mt-0.5" />
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="p-6 flex flex-col flex-1">
+                    <h3 className="font-semibold text-forest-800 text-lg mb-2">{guide.category} Plants</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed mb-4">{guide.summary}</p>
 
-                  <Link
-                    to="/shop"
-                    className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:text-forest-500 transition-colors"
-                  >
-                    Browse {guide.category} plants
-                    <ArrowRight size={15} />
-                  </Link>
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      <span className="inline-flex items-center gap-1.5 text-xs text-forest-700 bg-forest-50 px-2.5 py-1.5 rounded-lg">
+                        <Sun size={13} />
+                        {guide.light}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-xs text-forest-700 bg-forest-50 px-2.5 py-1.5 rounded-lg">
+                        <Droplets size={13} />
+                        {guide.water}
+                      </span>
+                    </div>
+
+                    <ul className="space-y-2 mb-5">
+                      {guide.tips.map(tip => (
+                        <li key={tip} className="flex gap-2.5 text-sm text-gray-500 leading-relaxed">
+                          <CheckCircle2 size={15} className="text-forest-400 shrink-0 mt-0.5" />
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Link
+                      to="/shop"
+                      className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:text-forest-500 transition-colors"
+                    >
+                      Browse {guide.category} plants
+                      <ArrowRight size={15} />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
