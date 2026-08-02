@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -12,7 +13,8 @@ import {
   Heart,
   Quote,
 } from 'lucide-react';
-import { products } from '../data/products';
+import { supabase } from '../lib/supabase';
+import type { Product } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 import StarRating from '../components/StarRating';
 
@@ -87,7 +89,19 @@ const reviews = [
 ];
 
 export default function HomePage() {
-  const featured = products.slice(0, 3);
+  const [featured, setFeatured] = useState<Product[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .limit(3)
+      .then(({ data, error }) => {
+        if (!error && data) setFeatured(data as Product[]);
+      });
+  }, []);
 
   return (
     <div>

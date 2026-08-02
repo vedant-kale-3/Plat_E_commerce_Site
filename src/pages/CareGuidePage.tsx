@@ -16,10 +16,26 @@ import {
   Thermometer,
   Loader2
 } from 'lucide-react';
-import { type PlantGuide, type CareBasic, type TroubleshootIssue, type SeasonalGuide } from '../data/careGuide';
-import { supabase } from '../lib/supabase';
+import {
+  careBasics,
+  plantGuides,
+  troubleshooting,
+  seasonalGuide,
+  type PlantGuide,
+} from '../data/careGuide';
 
-const difficultyStyles: Record<PlantGuide['difficulty'], string> = {
+interface CareGuide {
+  id: string;
+  category: string;
+  image: string;
+  light: string;
+  water: string;
+  difficulty: 'Easy' | 'Moderate' | 'Expert';
+  summary: string;
+  tips: string[];
+}
+
+const difficultyStyles: Record<CareGuide['difficulty'], string> = {
   Easy: 'bg-forest-100 text-forest-700',
   Moderate: 'bg-amber-100 text-amber-700',
   Expert: 'bg-rose-100 text-rose-700',
@@ -34,75 +50,8 @@ const iconMap: Record<string, any> = {
 };
 
 export default function CareGuidePage() {
-  const [activeCategory, setActiveCategory] = useState<string>('All');
   const [openIssue, setOpenIssue] = useState<number | null>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // State for data from Supabase
-  const [loading, setLoading] = useState(true);
-  const [careBasics, setCareBasics] = useState<CareBasic[]>([]);
-  const [plantGuides, setPlantGuides] = useState<PlantGuide[]>([]);
-  const [troubleshooting, setTroubleshooting] = useState<TroubleshootIssue[]>([]);
-  const [seasonalGuide, setSeasonalGuide] = useState<SeasonalGuide[]>([]);
-
-  useEffect(() => {
-    async function fetchCareGuideContent() {
-      try {
-        const { data, error } = await supabase
-          .from('care_guide_content')
-          .select('*');
-
-        if (error) throw error;
-        
-        if (data) {
-          // Sort the data into their respective arrays
-          const basics: CareBasic[] = [];
-          const guides: PlantGuide[] = [];
-          const issues: TroubleshootIssue[] = [];
-          const seasonal: SeasonalGuide[] = [];
-
-          data.forEach(row => {
-            const content = row.content;
-            
-            switch (row.section) {
-              case 'basics':
-                basics.push({
-                  ...content,
-                  icon: iconMap[content.icon] || Leaf
-                } as CareBasic);
-                break;
-              case 'plant_guides':
-                guides.push(content as PlantGuide);
-                break;
-              case 'troubleshooting':
-                issues.push(content as TroubleshootIssue);
-                break;
-              case 'seasonal':
-                seasonal.push({
-                  ...content,
-                  icon: iconMap[content.icon] || Leaf
-                } as SeasonalGuide);
-                break;
-            }
-          });
-
-          setCareBasics(basics);
-          setPlantGuides(guides);
-          setTroubleshooting(issues);
-          
-          // Basic sort for seasons to make sure they are in order if returned out of order
-          const seasonOrder = { 'Spring': 1, 'Summer': 2, 'Fall': 3, 'Winter': 4 };
-          setSeasonalGuide(seasonal.sort((a, b) => seasonOrder[a.season as keyof typeof seasonOrder] - seasonOrder[b.season as keyof typeof seasonOrder]));
-        }
-      } catch (error) {
-        console.error("Error fetching care guide content:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchCareGuideContent();
-  }, []);
 
   const categories = ['All', ...plantGuides.map(g => g.category)];
   const filteredGuides =
@@ -199,23 +148,6 @@ export default function CareGuidePage() {
             </p>
           </div>
 
-          {/* Category filter */}
-          <div className="flex flex-wrap justify-center gap-2.5 mb-10">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  activeCategory === cat
-                    ? 'bg-forest-800 text-white shadow-sm'
-                    : 'bg-white text-forest-700 hover:bg-forest-100 border border-forest-100'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
           {/* Infinite horizontal scroll strip */}
           <div className="relative overflow-hidden">
             {/* fade edges */}
@@ -225,9 +157,9 @@ export default function CareGuidePage() {
             <div
               ref={scrollRef}
               className="flex gap-6 w-max animate-scroll-x hover:[animation-play-state:paused]"
-              style={{ animationDuration: `${filteredGuides.length * 8}s` }}
+              style={{ animationDuration: `${guides.length * 8}s` }}
             >
-              {[...filteredGuides, ...filteredGuides, ...filteredGuides].map((guide, idx) => (
+              {[...guides, ...guides, ...guides].map((guide, idx) => (
                 <div
                   key={`${guide.category}-${idx}`}
                   className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover overflow-hidden transition-all duration-300 flex flex-col w-[320px] shrink-0"
@@ -306,9 +238,8 @@ export default function CareGuidePage() {
             return (
               <div
                 key={issue.symptom}
-                className={`bg-white rounded-2xl shadow-card overflow-hidden transition-all duration-300 ${
-                  isOpen ? 'shadow-card-hover' : ''
-                }`}
+                className={`bg-white rounded-2xl shadow-card overflow-hidden transition-all duration-300 ${isOpen ? 'shadow-card-hover' : ''
+                  }`}
               >
                 <button
                   onClick={() => setOpenIssue(isOpen ? null : idx)}
@@ -325,9 +256,8 @@ export default function CareGuidePage() {
                 </button>
 
                 <div
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                  }`}
+                  className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                    }`}
                 >
                   <div className="overflow-hidden">
                     <div className="px-5 pb-5 pl-[4.25rem]">

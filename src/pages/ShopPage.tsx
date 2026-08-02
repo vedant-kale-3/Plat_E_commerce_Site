@@ -1,13 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   SlidersHorizontal,
-  ChevronDown,
   CheckCircle2,
   Search,
   ArrowRight,
 } from 'lucide-react';
-import { products } from '../data/products';
+import { supabase } from '../lib/supabase';
+import type { Product } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 
 type LightFilter = 'All' | 'Low Light' | 'Bright Indirect';
@@ -34,7 +34,19 @@ export default function ShopPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
+  const [products, setProducts] = useState<Product[]>([]);
   const searchQuery = (searchParams.get('search') || searchInput).toLowerCase().trim();
+
+  useEffect(() => {
+    supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data) setProducts(data as Product[]);
+      });
+  }, []);
 
   const filtered = useMemo(() => {
     const range = priceRanges[priceRangeIdx];

@@ -46,7 +46,7 @@ export default function ProductCard({ product }: { product: Product }) {
         <p className="text-xs text-gray-500 leading-relaxed line-clamp-2 mb-3">{product.description}</p>
 
         <div className="mb-3">
-          <StarRating rating={product.rating} reviewCount={product.reviewCount} />
+          <StarRating rating={product.rating} reviewCount={product.review_count} />
         </div>
 
         <div className="mt-auto flex items-center justify-between gap-3">
