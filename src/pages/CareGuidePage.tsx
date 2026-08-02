@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -12,14 +12,12 @@ import {
   Stethoscope,
   Sun,
   Droplets,
+  Flower2,
+  Thermometer,
+  Loader2
 } from 'lucide-react';
-import {
-  careBasics,
-  plantGuides,
-  troubleshooting,
-  seasonalGuide,
-  type PlantGuide,
-} from '../data/careGuide';
+import { type PlantGuide, type CareBasic, type TroubleshootIssue, type SeasonalGuide } from '../data/careGuide';
+import { supabase } from '../lib/supabase';
 
 const difficultyStyles: Record<PlantGuide['difficulty'], string> = {
   Easy: 'bg-forest-100 text-forest-700',
@@ -27,16 +25,101 @@ const difficultyStyles: Record<PlantGuide['difficulty'], string> = {
   Expert: 'bg-rose-100 text-rose-700',
 };
 
+// Map string icon names from DB to Lucide React components
+const iconMap: Record<string, any> = {
+  sun: Sun,
+  droplets: Droplets,
+  thermometer: Thermometer,
+  flower2: Flower2,
+};
+
 export default function CareGuidePage() {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [openIssue, setOpenIssue] = useState<number | null>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // State for data from Supabase
+  const [loading, setLoading] = useState(true);
+  const [careBasics, setCareBasics] = useState<CareBasic[]>([]);
+  const [plantGuides, setPlantGuides] = useState<PlantGuide[]>([]);
+  const [troubleshooting, setTroubleshooting] = useState<TroubleshootIssue[]>([]);
+  const [seasonalGuide, setSeasonalGuide] = useState<SeasonalGuide[]>([]);
+
+  useEffect(() => {
+    async function fetchCareGuideContent() {
+      try {
+        const { data, error } = await supabase
+          .from('care_guide_content')
+          .select('*');
+
+        if (error) throw error;
+        
+        if (data) {
+          // Sort the data into their respective arrays
+          const basics: CareBasic[] = [];
+          const guides: PlantGuide[] = [];
+          const issues: TroubleshootIssue[] = [];
+          const seasonal: SeasonalGuide[] = [];
+
+          data.forEach(row => {
+            const content = row.content;
+            
+            switch (row.section) {
+              case 'basics':
+                basics.push({
+                  ...content,
+                  icon: iconMap[content.icon] || Leaf
+                } as CareBasic);
+                break;
+              case 'plant_guides':
+                guides.push(content as PlantGuide);
+                break;
+              case 'troubleshooting':
+                issues.push(content as TroubleshootIssue);
+                break;
+              case 'seasonal':
+                seasonal.push({
+                  ...content,
+                  icon: iconMap[content.icon] || Leaf
+                } as SeasonalGuide);
+                break;
+            }
+          });
+
+          setCareBasics(basics);
+          setPlantGuides(guides);
+          setTroubleshooting(issues);
+          
+          // Basic sort for seasons to make sure they are in order if returned out of order
+          const seasonOrder = { 'Spring': 1, 'Summer': 2, 'Fall': 3, 'Winter': 4 };
+          setSeasonalGuide(seasonal.sort((a, b) => seasonOrder[a.season as keyof typeof seasonOrder] - seasonOrder[b.season as keyof typeof seasonOrder]));
+        }
+      } catch (error) {
+        console.error("Error fetching care guide content:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchCareGuideContent();
+  }, []);
 
   const categories = ['All', ...plantGuides.map(g => g.category)];
   const filteredGuides =
     activeCategory === 'All'
       ? plantGuides
       : plantGuides.filter(g => g.category === activeCategory);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-forest-50">
+        <div className="flex flex-col items-center text-forest-600 gap-4">
+          <Loader2 className="w-12 h-12 animate-spin" />
+          <p className="font-medium">Loading Plant Wisdom...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

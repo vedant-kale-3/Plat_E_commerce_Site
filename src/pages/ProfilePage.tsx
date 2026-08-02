@@ -136,7 +136,7 @@ export default function ProfilePage() {
                       </span>
                     </div>
                     <div className="p-5 space-y-3">
-                      {order.items.map(item => (
+                      {order.items.map((item: any, i) => (
                         <div key={item.name} className="flex items-center gap-3">
                           <img src={item.image} alt={item.name} className="w-12 h-12 rounded-lg object-cover" />
                           <div className="flex-1 min-w-0">

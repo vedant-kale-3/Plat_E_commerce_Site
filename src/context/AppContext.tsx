@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 export interface Product {
   id: number;
@@ -19,6 +20,7 @@ export interface CartItem extends Product {
 }
 
 export interface UserSession {
+  id: string;
   name: string;
   email: string;
   firstName: string;
@@ -32,7 +34,7 @@ export interface UserSession {
     country: string;
   };
   joined: string;
-  orders: import('../data/mockUsers').Order[];
+  orders: any[]; // We can strictly type this later when we build the orders table fully
 }
 
 interface AppContextType {
@@ -43,6 +45,8 @@ interface AppContextType {
   cartCount: number;
   userSession: UserSession | null;
   setUserSession: (session: UserSession | null) => void;
+  isLoadingSession: boolean;
+  logout: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -50,6 +54,65 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [userSession, setUserSession] = useState<UserSession | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+
+  useEffect(() => {
+    // 1. Check active session on load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        fetchUserProfile(session.user);
+      } else {
+        setIsLoadingSession(false);
+      }
+    });
+
+    // 2. Listen for auth changes (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchUserProfile(session.user);
+      } else {
+        setUserSession(null);
+        setIsLoadingSession(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function fetchUserProfile(user: any) {
+    try {
+      const metadata = user.user_metadata || {};
+
+      setUserSession({
+        id: user.id,
+        email: user.email || '',
+        name: metadata.full_name || user.email?.split('@')[0] || 'User',
+        firstName: metadata.first_name || '',
+        lastName: metadata.last_name || '',
+        phone: metadata.phone || '',
+        address: {
+          street: '',
+          city: '',
+          state: '',
+          zip: '',
+          country: '',
+        },
+        joined: user.created_at 
+          ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+          : new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        orders: [], // Fetching orders would go here
+      });
+    } catch (err) {
+      console.error('Failed to load user profile');
+    } finally {
+      setIsLoadingSession(false);
+    }
+  }
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUserSession(null);
+  };
 
   const addToCart = (product: Product) => {
     setCartItems(prev => {
@@ -81,7 +144,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppContext.Provider
-      value={{ cartItems, addToCart, removeFromCart, updateQuantity, cartCount, userSession, setUserSession }}
+      value={{ 
+        cartItems, 
+        addToCart, 
+        removeFromCart, 
+        updateQuantity, 
+        cartCount, 
+        userSession, 
+        setUserSession,
+        isLoadingSession,
+        logout
+      }}
     >
       {children}
     </AppContext.Provider>

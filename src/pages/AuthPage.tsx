@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { useApp } from '../context/AppContext';
-import { findUser } from '../data/mockUsers';
+import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 type Mode = 'login' | 'register';
 
@@ -25,7 +24,7 @@ export default function AuthPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [success, setSuccess] = useState(false);
-  const { setUserSession } = useApp();
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const validate = (): boolean => {
@@ -38,62 +37,57 @@ export default function AuthPage() {
     }
     if (form.password.length === 0) {
       newErrors.password = 'Password is required.';
+    } else if (mode === 'register' && form.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters.';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    
+    setIsLoading(true);
+    setErrors({});
 
-    if (mode === 'login') {
-      const user = findUser(form.email, form.password);
-      if (!user) {
-        const existing = [1, 2, 3];
-        void existing;
-        const known = ['Example@gmail.com', 'admin@gmail.com', 'Customer@gmail.com']
-          .some(e => e.toLowerCase() === form.email.toLowerCase().trim());
-        setErrors({
-          auth: known
-            ? 'Wrong password. Please try again.'
-            : 'Account does not exist. Please check your email or sign up.',
+    try {
+      if (mode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password,
         });
-        return;
+
+        if (error) throw error;
+        
+        setSuccess(true);
+        setTimeout(() => navigate('/'), 900);
+      } else {
+        const [firstName, ...lastNameParts] = form.name.split(' ');
+        const lastName = lastNameParts.join(' ');
+
+        const { data, error } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: {
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              full_name: form.name
+            }
+          }
+        });
+
+        if (error) throw error;
+        
+        setSuccess(true);
+        setTimeout(() => navigate('/'), 900);
       }
-
-      setErrors({});
-      setSuccess(true);
-      setTimeout(() => {
-        setUserSession({
-          name: `${user.firstName} ${user.lastName}`,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phone: user.phone,
-          address: user.address,
-          joined: user.joined,
-          orders: user.orders,
-        });
-        navigate('/');
-      }, 900);
-      return;
+    } catch (err: any) {
+      setErrors({ auth: err.message || 'An error occurred during authentication.' });
+    } finally {
+      setIsLoading(false);
     }
-
-    setSuccess(true);
-    setTimeout(() => {
-      setUserSession({
-        name: form.name || form.email.split('@')[0],
-        email: form.email,
-        firstName: form.name.split(' ')[0] || form.email.split('@')[0],
-        lastName: form.name.split(' ')[1] || '',
-        phone: '',
-        address: { street: '', city: '', state: '', zip: '', country: '' },
-        joined: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-        orders: [],
-      });
-      navigate('/');
-    }, 900);
   };
 
   const handleChange = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,17 +273,22 @@ export default function AuthPage() {
 
             <button
               type="submit"
-              disabled={success}
+              disabled={success || isLoading}
               className={`w-full py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 ${
                 success
                   ? 'bg-forest-500 text-white cursor-default'
-                  : 'bg-forest-800 hover:bg-forest-700 text-white shadow-sm hover:shadow-md'
+                  : 'bg-forest-800 hover:bg-forest-700 text-white shadow-sm hover:shadow-md disabled:opacity-70 disabled:hover:bg-forest-800'
               }`}
             >
               {success ? (
                 <>
                   <CheckCircle2 size={18} />
                   {mode === 'login' ? 'Signed in!' : 'Account created!'}
+                </>
+              ) : isLoading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  {mode === 'login' ? 'Signing in...' : 'Creating account...'}
                 </>
               ) : mode === 'login' ? (
                 'Sign In'
