@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -13,30 +13,45 @@ import {
   Sun,
   Droplets,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import {
   careBasics,
-  plantGuides,
   troubleshooting,
   seasonalGuide,
-  type PlantGuide,
 } from '../data/careGuide';
 
-const difficultyStyles: Record<PlantGuide['difficulty'], string> = {
+interface CareGuide {
+  id: string;
+  category: string;
+  image: string;
+  light: string;
+  water: string;
+  difficulty: 'Easy' | 'Moderate' | 'Expert';
+  summary: string;
+  tips: string[];
+}
+
+const difficultyStyles: Record<CareGuide['difficulty'], string> = {
   Easy: 'bg-forest-100 text-forest-700',
   Moderate: 'bg-amber-100 text-amber-700',
   Expert: 'bg-rose-100 text-rose-700',
 };
 
 export default function CareGuidePage() {
-  const [activeCategory, setActiveCategory] = useState<string>('All');
   const [openIssue, setOpenIssue] = useState<number | null>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [guides, setGuides] = useState<CareGuide[]>([]);
 
-  const categories = ['All', ...plantGuides.map(g => g.category)];
-  const filteredGuides =
-    activeCategory === 'All'
-      ? plantGuides
-      : plantGuides.filter(g => g.category === activeCategory);
+  useEffect(() => {
+    supabase
+      .from('care_guides')
+      .select('id, category, image, light, water, difficulty, summary, tips')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data) setGuides(data as CareGuide[]);
+      });
+  }, []);
 
   return (
     <div>
@@ -116,23 +131,6 @@ export default function CareGuidePage() {
             </p>
           </div>
 
-          {/* Category filter */}
-          <div className="flex flex-wrap justify-center gap-2.5 mb-10">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  activeCategory === cat
-                    ? 'bg-forest-800 text-white shadow-sm'
-                    : 'bg-white text-forest-700 hover:bg-forest-100 border border-forest-100'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
           {/* Infinite horizontal scroll strip */}
           <div className="relative overflow-hidden">
             {/* fade edges */}
@@ -142,9 +140,9 @@ export default function CareGuidePage() {
             <div
               ref={scrollRef}
               className="flex gap-6 w-max animate-scroll-x hover:[animation-play-state:paused]"
-              style={{ animationDuration: `${filteredGuides.length * 8}s` }}
+              style={{ animationDuration: `${guides.length * 8}s` }}
             >
-              {[...filteredGuides, ...filteredGuides, ...filteredGuides].map((guide, idx) => (
+              {[...guides, ...guides, ...guides].map((guide, idx) => (
                 <div
                   key={`${guide.category}-${idx}`}
                   className="group bg-white rounded-2xl shadow-card hover:shadow-card-hover overflow-hidden transition-all duration-300 flex flex-col w-[320px] shrink-0"

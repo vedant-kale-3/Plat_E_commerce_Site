@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   price: number;
   image: string;
@@ -9,9 +9,9 @@ export interface Product {
   light: 'Low Light' | 'Bright Indirect' | 'Full Sun';
   size: 'Small' | 'Medium' | 'Large';
   rating: number;
-  reviewCount: number;
+  review_count: number;
   description: string;
-  tag?: string;
+  tag?: string | null;
 }
 
 export interface CartItem extends Product {
@@ -38,8 +38,8 @@ export interface UserSession {
 interface AppContextType {
   cartItems: CartItem[];
   addToCart: (product: Product) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, delta: number) => void;
+  removeFromCart: (id: string) => void;
+  updateQuantity: (id: string, delta: number) => void;
   cartCount: number;
   userSession: UserSession | null;
   setUserSession: (session: UserSession | null) => void;
@@ -63,11 +63,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: string) => {
     setCartItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const updateQuantity = (id: number, delta: number) => {
+  const updateQuantity = (id: string, delta: number) => {
     setCartItems(prev =>
       prev
         .map(item =>
