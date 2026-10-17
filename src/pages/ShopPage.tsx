@@ -6,7 +6,7 @@ import {
   Search,
   ArrowRight,
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { fallbackProducts, fetchProducts } from '../data/products';
 import type { Product } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 
@@ -34,18 +34,11 @@ export default function ShopPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(fallbackProducts);
   const searchQuery = (searchParams.get('search') || searchInput).toLowerCase().trim();
 
   useEffect(() => {
-    supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .then(({ data, error }) => {
-        if (!error && data) setProducts(data as Product[]);
-      });
+    fetchProducts().then(setProducts);
   }, []);
 
   const filtered = useMemo(() => {

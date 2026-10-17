@@ -66,7 +66,7 @@ export default function AuthPage() {
         const [firstName, ...lastNameParts] = form.name.split(' ');
         const lastName = lastNameParts.join(' ');
 
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: form.email,
           password: form.password,
           options: {

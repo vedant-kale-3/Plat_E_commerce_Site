@@ -13,7 +13,7 @@ import {
   Heart,
   Quote,
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { fallbackProducts, fetchFeaturedProducts } from '../data/products';
 import type { Product } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 import StarRating from '../components/StarRating';
@@ -89,18 +89,10 @@ const reviews = [
 ];
 
 export default function HomePage() {
-  const [featured, setFeatured] = useState<Product[]>([]);
+  const [featured, setFeatured] = useState<Product[]>(fallbackProducts.slice(0, 3));
 
   useEffect(() => {
-    supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .limit(3)
-      .then(({ data, error }) => {
-        if (!error && data) setFeatured(data as Product[]);
-      });
+    fetchFeaturedProducts(3).then(setFeatured);
   }, []);
 
   return (

@@ -12,20 +12,17 @@ import {
   Stethoscope,
   Sun,
   Droplets,
-  Flower2,
-  Thermometer,
-  Loader2
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import {
   careBasics,
   plantGuides,
   troubleshooting,
   seasonalGuide,
-  type PlantGuide,
 } from '../data/careGuide';
 
 interface CareGuide {
-  id: string;
+  id?: string;
   category: string;
   image: string;
   light: string;
@@ -41,34 +38,31 @@ const difficultyStyles: Record<CareGuide['difficulty'], string> = {
   Expert: 'bg-rose-100 text-rose-700',
 };
 
-// Map string icon names from DB to Lucide React components
-const iconMap: Record<string, any> = {
-  sun: Sun,
-  droplets: Droplets,
-  thermometer: Thermometer,
-  flower2: Flower2,
-};
-
 export default function CareGuidePage() {
   const [openIssue, setOpenIssue] = useState<number | null>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [guides, setGuides] = useState<CareGuide[]>(plantGuides);
 
-  const categories = ['All', ...plantGuides.map(g => g.category)];
-  const filteredGuides =
-    activeCategory === 'All'
-      ? plantGuides
-      : plantGuides.filter(g => g.category === activeCategory);
+  useEffect(() => {
+    async function fetchGuides() {
+      try {
+        const { data, error } = await supabase
+          .from('care_guides')
+          .select('id, category, image, light, water, difficulty, summary, tips')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-forest-50">
-        <div className="flex flex-col items-center text-forest-600 gap-4">
-          <Loader2 className="w-12 h-12 animate-spin" />
-          <p className="font-medium">Loading Plant Wisdom...</p>
-        </div>
-      </div>
-    );
-  }
+        if (!error && data && data.length > 0) {
+          setGuides(data as CareGuide[]);
+        }
+      } catch (err) {
+        console.warn('Failed to load care guides from Supabase:', err);
+      }
+    }
+
+    fetchGuides();
+  }, []);
+
 
   return (
     <div>
