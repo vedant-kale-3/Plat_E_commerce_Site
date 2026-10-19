@@ -59,6 +59,9 @@ The project is a **Vite + React + TypeScript** SPA (Single Page Application) usi
 Plat_E_commerce_Site/
 ├── public/                   # Static assets (images, logo)
 │   └── image.png             # Fiona brand logo used in Navbar & Footer
+├── supabase/                 # Supabase configuration & database migrations
+│   └── migrations/           # SQL migration files
+│       └── 20260802220217_create_products_and_care_guides.sql # Table schemas, RLS, seed data
 ├── src/
 │   ├── main.tsx              # React app entry point
 │   ├── App.tsx               # Root component — router setup
@@ -79,20 +82,20 @@ Plat_E_commerce_Site/
 │   │   └── StarRating.tsx    # Star rating display (filled/partial/empty)
 │   │
 │   ├── pages/                # One file per route
-│   │   ├── HomePage.tsx          # / — Landing page
-│   │   ├── ShopPage.tsx          # /shop — Product catalog + filters
+│   │   ├── HomePage.tsx          # / — Landing page (dynamic featured products)
+│   │   ├── ShopPage.tsx          # /shop — Product catalog + filters (dynamic products)
 │   │   ├── ProductDetailPage.tsx # /product/:id — Stub (Under Construction)
 │   │   ├── CartPage.tsx          # /cart — Cart review + order summary
 │   │   ├── CheckoutPage.tsx      # /checkout — Order confirmation screen
-│   │   ├── AuthPage.tsx          # /auth — Login / Register
+│   │   ├── AuthPage.tsx          # /auth — Login / Register (Supabase Auth)
 │   │   ├── ProfilePage.tsx       # /profile — User info + order history
-│   │   ├── CareGuidePage.tsx     # /care-guide — Plant care articles
+│   │   ├── CareGuidePage.tsx     # /care-guide — Plant care articles (Supabase + fallback)
 │   │   └── UnderConstruction.tsx # Reusable "coming soon" placeholder
 │   │
-│   └── data/                 # Static data files (replaces a real API for now)
-│       ├── products.ts       # Array of all 10 Product objects
+│   └── data/                 # Static data & API fetchers with fallback
+│       ├── products.ts       # fallbackProducts + fetchProducts / fetchFeaturedProducts
 │       ├── mockUsers.ts      # Array of 3 mock users + findUser() helper
-│       └── careGuide.ts      # Care tips content + plant guide articles
+│       └── careGuide.ts      # Care basics, plantGuides, troubleshooting & seasonalGuide
 │
 ├── .env                      # Real Supabase credentials (gitignored)
 ├── .env.example              # Safe template for env vars
@@ -158,8 +161,8 @@ function MyComponent() {
 |---|---|---|
 | `cartItems` | `CartItem[]` | All items currently in the cart |
 | `addToCart(product)` | `(Product) => void` | Adds a product; increments quantity if already in cart |
-| `removeFromCart(id)` | `(number) => void` | Removes a product by its id |
-| `updateQuantity(id, delta)` | `(number, number) => void` | Increases or decreases quantity; removes item if drops to 0 |
+| `removeFromCart(id)` | `(string) => void` | Removes a product by its id |
+| `updateQuantity(id, delta)` | `(string, number) => void` | Increases or decreases quantity; removes item if drops to 0 |
 | `cartCount` | `number` | Derived total number of individual items (sum of all quantities) |
 | `userSession` | `UserSession \| null` | The logged-in user, or `null` if not signed in |
 | `setUserSession` | `(UserSession \| null) => void` | Set after login / clear on sign-out |
@@ -173,25 +176,25 @@ User session state is **persistent**, automatically syncing with Supabase Auth v
 
 ## 6. TypeScript Interfaces & Data Models
 
-All core interfaces are exported from `src/context/AppContext.tsx` and `src/data/mockUsers.ts`.
+All core interfaces are exported from `src/context/AppContext.tsx`, `src/data/mockUsers.ts`, and `src/data/careGuide.ts`.
 
 ### `Product`
 
 Defined in `AppContext.tsx`. Every plant in the store is a `Product`.
 
 ```ts
-interface Product {
-  id: number;              // Unique numeric ID
+export interface Product {
+  id: string;              // Unique ID ('1'..'10' or DB UUID)
   name: string;            // Display name, e.g. "Monstera Deliciosa"
-  price: number;           // Price in INR (Indian Rupees)
+  price: number;           // Price in USD / local currency
   image: string;           // Path to image in /public, or a full URL
-  category: string;        // e.g. "Tropical", "Succulent", "Hanging"
+  category: string;        // e.g. "Tropical", "Succulent", "Hanging", "Foliage"
   light: 'Low Light' | 'Bright Indirect' | 'Full Sun';
   size: 'Small' | 'Medium' | 'Large';
   rating: number;          // 0-5, supports .5 increments
-  reviewCount: number;     // Number of reviews shown alongside rating
+  review_count: number;    // Number of reviews (snake_case to match Supabase)
   description: string;     // Short product description
-  tag?: string;            // Optional badge: "Best Seller", "New Arrival", "Premium"
+  tag?: string | null;     // Optional badge: "Best Seller", "New Arrival", "Premium", or null
 }
 ```
 
@@ -200,17 +203,17 @@ interface Product {
 Extends `Product` with a quantity field.
 
 ```ts
-interface CartItem extends Product {
+export interface CartItem extends Product {
   quantity: number;
 }
 ```
 
 ### `UserSession`
 
-The shape of the currently logged-in user stored in context. Populated from `MockUser` after login.
+The shape of the currently logged-in user stored in context. Populated from `user_metadata` in Supabase session.
 
 ```ts
-interface UserSession {
+export interface UserSession {
   name: string;          // Full display name (firstName + lastName)
   email: string;
   firstName: string;
@@ -235,7 +238,7 @@ Same shape as `UserSession`, plus a `password` field. Never expose this in the U
 ### `Order` (in `mockUsers.ts`)
 
 ```ts
-interface Order {
+export interface Order {
   id: string;                        // e.g. "FNA-2041"
   date: string;                      // e.g. "Jul 12, 2026"
   status: 'Delivered' | 'Shipped' | 'Processing';
@@ -252,10 +255,47 @@ interface Order {
 ### `CareBasic` (in `careGuide.ts`)
 
 ```ts
-interface CareBasic {
-  icon: LucideIcon;   // A Lucide icon component
+export interface CareBasic {
+  icon: LucideIcon;   // A Lucide icon component (Droplets, Sun, Thermometer, Flower2)
   title: string;
   tips: string[];
+}
+```
+
+### `PlantGuide` (in `careGuide.ts`)
+
+```ts
+export interface PlantGuide {
+  id?: string;
+  category: string;
+  image: string;
+  light: string;
+  water: string;
+  difficulty: 'Easy' | 'Moderate' | 'Expert';
+  summary: string;
+  tips: string[];
+}
+```
+
+### `TroubleshootIssue` (in `careGuide.ts`)
+
+```ts
+export interface TroubleshootIssue {
+  symptom: string;
+  cause: string;
+  fix: string[];
+}
+```
+
+### `SeasonalGuide` (in `careGuide.ts`)
+
+```ts
+export interface SeasonalGuide {
+  season: string;
+  icon: LucideIcon;
+  accent: string;
+  checklist: string[];
+  tip: string;
 }
 ```
 
@@ -330,7 +370,7 @@ A single product tile used in the shop grid. Features:
 - Optional tag badge (e.g. "Best Seller")
 - Size badge (top-right overlay)
 - Category label, product name, truncated description
-- `StarRating` component
+- `StarRating` component (passing `rating={product.rating}` and `reviewCount={product.review_count}`)
 - "Add to Cart" button with a 1.4s confirmation flash state
 
 **When to edit:** Update the product card layout, add a wishlist button, change the "added" animation duration.
@@ -360,9 +400,10 @@ All pages are in `src/pages/`. Each file exports a single default component.
 
 ### `HomePage.tsx` — `/`
 
-The landing page. A long-form marketing page with multiple sections. This is the largest file (~18 KB). Sections include:
+The landing page. A long-form marketing page with multiple sections.
+- **Dynamic data:** Initializes `featured` products with `fallbackProducts.slice(0, 3)` and fetches active featured items from Supabase via `fetchFeaturedProducts(3)` on mount.
 - Hero section with CTA
-- Featured products marquee / showcase
+- Featured products showcase using `ProductCard`
 - Brand story (`id="story"` — linked from Navbar "About")
 - Customer reviews (`id="reviews"` — linked from Navbar "Reviews")
 - Category browse section
@@ -373,10 +414,11 @@ The landing page. A long-form marketing page with multiple sections. This is the
 
 ### `ShopPage.tsx` — `/shop`
 
-**Uses data:** `products` array from `src/data/products.ts`
+**Uses data:** `fetchProducts()` and `fallbackProducts` from `src/data/products.ts`
 **Uses component:** `ProductCard`
 
 Full product catalog with:
+- **Dynamic data:** Initializes `products` state with `fallbackProducts` and fetches active catalog from Supabase via `fetchProducts()` on mount.
 - Sidebar filter panel (light needs, plant size, price range, search)
 - URL search param integration (`?search=monstera` syncs with the search box)
 - `useMemo` for filtered product list — recalculates only when filters change
@@ -467,15 +509,16 @@ Sign out calls `setUserSession(null)` and navigates to `/`.
 
 ### `CareGuidePage.tsx` — `/care-guide`
 
+**Uses data:** `careBasics`, `plantGuides`, `troubleshooting`, `seasonalGuide` from `src/data/careGuide.ts`
 **Uses service:** `supabase.from('care_guides')`
-**Uses component:** local helper components to render content
 
-A dynamic content page fetching from Supabase:
-- Contains a loading spinner state while fetching
-- Groups fetched guides by `section` (e.g. Basics, Light, Water)
-- Renders expandable/collapsible details
+A comprehensive plant care guide featuring both static wisdom and dynamic Supabase content:
+- **Care Basics:** 4 core pillars (Watering, Light, Humidity & Temperature, Soil & Repotting)
+- **Dynamic Plant Guides Carousel:** Initializes with `plantGuides` fallback; on mount, queries active guides from the Supabase `care_guides` table ordered by `sort_order`. If offline or empty, gracefully maintains fallback guides.
+- **Troubleshooting Accordion:** Expandable issues (Yellow leaves, Brown tips, Drooping, Pests, Slow growth) with symptoms, causes, and solutions.
+- **Seasonal Care Checklist:** Tabbed seasonal checklist (Spring, Summer, Fall, Winter) with actionable maintenance tasks.
 
-**When to edit:** Modify UI layout. To add new plant guides, just insert a new row in the Supabase `care_guides` table.
+**When to edit:** Modify page layout or static tips. To add new plant category guides, insert rows in Supabase `care_guides` or append to `plantGuides` in `src/data/careGuide.ts`.
 
 ---
 
@@ -497,20 +540,20 @@ Reusable "coming soon" screen with an animated Sprout icon and a fake progress b
 
 ## 9. Data Layer
 
-Products and Orders are still driven by static TypeScript files. Authentication and Care Guides have been migrated to the **Supabase backend**.
+The project employs a resilient data strategy: Authentication, Products, and Care Guides are integrated with **Supabase**, featuring **graceful offline/fallback mechanisms** so the site remains fully operational even if the Supabase instance is sleeping, rate-limited, or unreachable. Orders currently remain mock/in-memory data.
 
 ---
 
 ### `products.ts`
 
-Exports: `products: Product[]`
-
-An array of 10 `Product` objects. Images are either local files in `/public` or Unsplash URLs.
+**Exports:**
+- `fallbackProducts: Product[]`: An array of 10 curated plant products with local `/public` images and high-resolution Unsplash fallbacks.
+- `fetchProducts(): Promise<Product[]>`: Asynchronously queries Supabase `products` table (`.from('products').select('*').eq('is_active', true).order('sort_order', { ascending: true })`). If Supabase fails, is offline, or returns empty, logs a warning and returns `fallbackProducts`.
+- `fetchFeaturedProducts(limit = 3): Promise<Product[]>`: Queries Supabase for the top `limit` active products ordered by `sort_order`. Gracefully falls back to `fallbackProducts.slice(0, limit)`.
 
 **To add a new product:**
-1. Add an image to the `/public` folder
-2. Append a new object to the `products` array following the `Product` interface
-3. Give it the next sequential `id`
+1. Recommended: Insert a new row into the Supabase `products` table (`name`, `price`, `image`, `category`, `light`, `size`, `rating`, `review_count`, `description`, `tag`, `sort_order`, `is_active`).
+2. Fallback: Add the product to `fallbackProducts` in `src/data/products.ts` to ensure offline availability.
 
 ---
 
@@ -526,7 +569,7 @@ Three hardcoded test accounts:
 | `admin@gmail.com` | `admin@123` | Sam Rivera |
 | `Customer@gmail.com` | `Pass123` | Maya Chen |
 
-> **Security Warning:** Passwords are stored in plain text. This is only acceptable for mock/demo data. When connecting a real backend, never store plain-text passwords.
+> **Security Warning:** Passwords are stored in plain text. This is only acceptable for mock/demo data. Production authentication is handled directly by Supabase Auth (`supabase.auth.signInWithPassword` and `signUp`).
 
 `findUser` does a case-insensitive email match and an exact password match.
 
@@ -536,11 +579,29 @@ Three hardcoded test accounts:
 
 ### `careGuide.ts`
 
-Exports: `careBasics: CareBasic[]`, plus plant-specific guide data consumed by `CareGuidePage`.
+**Exports:**
+- `careBasics: CareBasic[]`: 4 foundational pillars (Watering, Light, Humidity & Temperature, Soil & Repotting) with icons and practical tips.
+- `plantGuides: PlantGuide[]`: 7 category-specific care guides (Tropical, Succulent, Trailing, Foliage, Flowering, Trees, Hanging) serving as default content and offline fallback for `CareGuidePage`.
+- `troubleshooting: TroubleshootIssue[]`: 5 common houseplant symptoms with diagnostic causes and step-by-step remedies.
+- `seasonalGuide: SeasonalGuide[]`: Seasonal checklist items and tips for Spring, Summer, Fall, and Winter.
 
-`careBasics` contains 4 care category objects (Watering, Light, Humidity & Temperature, Fertilizing), each with an icon and a list of tips.
+**To add a new plant care article:**
+1. Recommended: Insert a new row into the Supabase `care_guides` table.
+2. Fallback: Append to `plantGuides` array in `src/data/careGuide.ts`.
 
-**To add a new plant care article:** Edit this file and append to the plant guide array that `CareGuidePage` consumes.
+---
+
+### Supabase Database & Migrations
+
+**Migration File:** `supabase/migrations/20260802220217_create_products_and_care_guides.sql`
+
+Defines schemas, triggers, and Row Level Security:
+- **`products` table:** `id` (UUID default `gen_random_uuid()`), `name`, `price`, `image`, `category`, `light`, `size`, `rating`, `review_count`, `description`, `tag`, `is_active`, `sort_order`, `created_at`, `updated_at`.
+- **`care_guides` table:** `id` (UUID default `gen_random_uuid()`), `category`, `image`, `light`, `water`, `difficulty`, `summary`, `tips` (text[]), `is_active`, `sort_order`, `created_at`, `updated_at`.
+- **Triggers:** `set_updated_at()` automatically keeps `updated_at` current on update.
+- **RLS Policies:** Public `SELECT` allowed for anonymous and authenticated users; `INSERT`/`UPDATE`/`DELETE` restricted to authenticated users.
+- **Indexes:** `products_active_idx` and `care_guides_active_idx` indexing `is_active`.
+- **Seed Data:** Populates 10 products and 7 care guides upon migration.
 
 ---
 
@@ -596,7 +657,7 @@ The project uses **Inter** (from Google Fonts) as the primary sans-serif font, l
 | Newsletter signup (Footer) | UI only | Input and button render but do nothing |
 | Social login (Google/Apple) | UI only | Buttons render but do nothing |
 | Promo code (Cart) | UI only | Input and Apply button render but do nothing |
-| Supabase integration | Partially Done | Auth and Care Guides connected, missing Products/Orders |
+| Supabase integration | Mostly Complete | Auth, Products, and Care Guides are live with offline fallback; Orders/Checkout table pending |
 
 ---
 
@@ -637,8 +698,8 @@ Use this as a quick lookup for common tasks:
 
 | Task | File(s) to edit |
 |---|---|
-| Add a new product | `src/data/products.ts` |
-| Add a new plant care article | `src/data/careGuide.ts` |
+| Add a new product | Insert row in Supabase `products` table or append to `fallbackProducts` in `src/data/products.ts` |
+| Add a new plant care article | Insert row in Supabase `care_guides` table or append to `plantGuides` in `src/data/careGuide.ts` |
 | Add a test user account | `src/data/mockUsers.ts` |
 | Add a new page / route | `src/pages/NewPage.tsx` + `src/App.tsx` |
 | Add a top nav link | `src/components/Navbar.tsx` — `navLinks` array |
@@ -647,8 +708,8 @@ Use this as a quick lookup for common tasks:
 | Add a global animation or utility CSS class | `src/index.css` |
 | Add global state (e.g. wishlist) | `src/context/AppContext.tsx` |
 | Change cart pricing logic (shipping/tax) | `src/pages/CartPage.tsx` |
-| Fix auth / login behavior | `src/pages/AuthPage.tsx` + `src/data/mockUsers.ts` |
+| Fix auth / login behavior | `src/pages/AuthPage.tsx` + Supabase Auth dashboard |
 | Build out the product detail page | `src/pages/ProductDetailPage.tsx` |
-| Connect Supabase backend | Done for Auth & Care Guides — update Products/Orders next |
+| Connect Supabase backend | Done for Auth, Products, and Care Guides — Orders/Checkout next |
 | Change the page-load animation | `src/index.css` — `.page-enter` / `@keyframes fadeInUp` |
 | Change scroll-to-top behavior | `src/components/Layout.tsx` — `useEffect` |

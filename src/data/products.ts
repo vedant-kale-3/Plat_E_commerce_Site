@@ -150,7 +150,7 @@ export async function fetchProducts(): Promise<Product[]> {
       return data as Product[];
     }
     if (error) {
-      console.warn('Supabase query error for products; serving fallback data:', error.message);
+      console.warn('Supabase query error for products; serving fallback data:', error?.message ?? String(error));
     }
     return fallbackProducts;
   } catch (err) {
@@ -176,7 +176,7 @@ export async function fetchFeaturedProducts(limit = 3): Promise<Product[]> {
       return data as Product[];
     }
     if (error) {
-      console.warn('Supabase query error for featured products; serving fallback data:', error.message);
+      console.warn('Supabase query error for featured products; serving fallback data:', error?.message ?? String(error));
     }
     return fallbackProducts.slice(0, limit);
   } catch (err) {
