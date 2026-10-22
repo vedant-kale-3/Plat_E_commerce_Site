@@ -82,9 +82,9 @@ Our testing strategy focuses on:
 | Test ID | Priority | Status | Function / Hook | Scenario / Exception Trigger | Expected Behavior & Assertions |
 |---|---|---|---|---|---|
 | **EX-CTX-01** | **P0** | **Fixed** | `useApp()` | Hook invoked in a component rendered outside of `<AppProvider>` | Throws descriptive error: `"useApp must be used within an AppProvider"`. |
-| **EX-CTX-02** | **P0** | **Not Fixed** | `addToCart(product)` | Product with duplicate ID added repeatedly in rapid succession | Existing cart item quantity increments without creating duplicate keys or race conditions. |
-| **EX-CTX-03** | **P0** | **Not Fixed** | `updateQuantity(id, delta)` | `updateQuantity` called with `delta = -1` when current quantity is `1` | Automatically removes the item from `cartItems` instead of setting quantity to 0 or negative. |
-| **EX-CTX-04** | **P0** | **Not Fixed** | `updateQuantity(id, delta)` | `delta` is large negative number (e.g. `-50`) on item with quantity `2` | Drops below 1; cleanly removes item without negative quantity artifacts. |
+| **EX-CTX-02** | **P0** | **Fixed** | `addToCart(product)` | Product with duplicate ID added repeatedly in rapid succession | Existing cart item quantity increments without creating duplicate keys or race conditions. |
+| **EX-CTX-03** | **P0** | **Fixed** | `updateQuantity(id, delta)` | `updateQuantity` called with `delta = -1` when current quantity is `1` | Automatically removes the item from `cartItems` instead of setting quantity to 0 or negative. |
+| **EX-CTX-04** | **P0** | **Fixed** | `updateQuantity(id, delta)` | `delta` is large negative number (e.g. `-50`) on item with quantity `2` | Drops below 1; cleanly removes item without negative quantity artifacts. |
 | **EX-CTX-05** | **P1** | **Not Fixed** | `removeFromCart(id)` | Called with a non-existent or malformed string `id` (e.g. `""`, `"unknown-999"`) | State remains unchanged; does not crash or throw unhandled exceptions. |
 | **EX-CTX-06** | **P1** | **Not Fixed** | `updateQuantity(id, delta)` | Called on a non-existent `id` | No-op; cart items and `cartCount` remain consistent. |
 | **EX-CTX-07** | **P1** | **Not Fixed** | `cartCount` | Multiple products added and removed | `cartCount` correctly recomputes sum of quantities; never drops below 0 or displays `NaN`. |
@@ -164,6 +164,6 @@ Test harness configuration:
 ## 5. Review & Progress Tracking
 
 - **Total Test Cases Defined:** 27
-- **Fixed & Verified:** 2 (EX-DATA-01, EX-CTX-01)
-- **Not Fixed / Pending Implementation:** 25
+- **Fixed & Verified:** 5 (EX-DATA-01, EX-CTX-01, EX-CTX-02, EX-CTX-03, EX-CTX-04)
+- **Not Fixed / Pending Implementation:** 22
 

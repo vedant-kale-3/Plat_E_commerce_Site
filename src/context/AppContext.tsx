@@ -102,7 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           : new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
         orders: [], // Fetching orders would go here
       });
-    } catch (err) {
+    } catch {
       console.error('Failed to load user profile');
     } finally {
       setIsLoadingSession(false);
@@ -115,6 +115,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addToCart = (product: Product) => {
+    if (!product || !product.id) return;
     setCartItems(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -131,6 +132,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateQuantity = (id: string, delta: number) => {
+    if (!Number.isFinite(delta)) return;
     setCartItems(prev =>
       prev
         .map(item =>
