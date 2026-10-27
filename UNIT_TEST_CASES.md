@@ -99,8 +99,8 @@ Our testing strategy focuses on:
 
 | Test ID | Priority | Status | Module / Area | Scenario / Exception Trigger | Expected Behavior & Assertions |
 |---|---|---|---|---|---|
-| **EX-FIN-01** | **P0** | **Not Fixed** | Price Calculation | Subtotal has recurring floating point decimals (e.g., $19.99 * 3 = $59.97 + 8% tax) | Total and tax are formatted to exactly 2 decimal places without IEEE 754 precision bugs (e.g., `$64.7676...`). |
-| **EX-FIN-02** | **P0** | **Not Fixed** | Shipping Threshold | Boundary conditions: Subtotal = `$59.99` vs `$60.00` | At `$59.99`, shipping is `$8.95` and progress shows remaining `$0.01`. At `$60.00`, shipping becomes `$0.00` (Free). |
+| **EX-FIN-01** | **P0** | **Fixed** | Price Calculation | Subtotal has recurring floating point decimals (e.g., $19.99 * 3 = $59.97 + 8% tax) | Total and tax are formatted to exactly 2 decimal places without IEEE 754 precision bugs (e.g., `$64.7676...`). |
+| **EX-FIN-02** | **P0** | **Fixed** | Shipping Threshold | Boundary conditions: Subtotal = `$59.99` vs `$60.00` | At `$59.99`, shipping is `$8.95` and progress shows remaining `$0.01`. At `$60.00`, shipping becomes `$0.00` (Free). |
 | **EX-FIN-03** | **P1** | **Not Fixed** | Empty Cart State | Cart has 0 items | Renders friendly empty state with "Your cart is empty" and "Start Shopping" button; does not calculate tax on empty array or crash. |
 | **EX-FIN-04** | **P2** | **Not Fixed** | Promo Code Form | Submitting empty string, whitespace, or invalid code | Prevents page reload; displays polite feedback or no-op without resetting user inputs. |
 
@@ -113,8 +113,8 @@ Our testing strategy focuses on:
 
 | Test ID | Priority | Status | Flow | Scenario / Exception Trigger | Expected Behavior & Assertions |
 |---|---|---|---|---|---|
-| **EX-AUTH-01** | **P0** | **Not Fixed** | Login | Supabase Auth returns `400 Invalid login credentials` | Catches error; sets `error` state; displays inline alert: `"Invalid email or password"`; leaves form populated. |
-| **EX-AUTH-02** | **P0** | **Not Fixed** | Login / Register | Network completely offline during form submission | Catches error; does not crash; shows user-friendly message (`"Network error. Please try again."`). |
+| **EX-AUTH-01** | **P0** | **Fixed** | Login | Supabase Auth returns `400 Invalid login credentials` | Catches error; sets `error` state; displays inline alert: `"Invalid email or password"`; leaves form populated. |
+| **EX-AUTH-02** | **P0** | **Fixed** | Login / Register | Network completely offline during form submission | Catches error; does not crash; shows user-friendly message (`"Network error. Please try again."`). |
 | **EX-AUTH-03** | **P0** | **Not Fixed** | Register | Email already registered (`User already registered`) | Displays inline warning stating the email already has an account. |
 | **EX-AUTH-04** | **P1** | **Not Fixed** | Register | Name contains single word or multiple spaces (e.g., `"Cher"` or `"Mary   Jane   Watson"`) | `name.split(' ')` correctly assigns `firstName` and gracefully handles empty `lastNameParts` without throwing `undefined`. |
 | **EX-AUTH-05** | **P1** | **Not Fixed** | Form Validation | User inputs invalid email format (e.g. `user@`, `notanemail`) | Regex catches error before calling Supabase API; shows immediate inline error. |

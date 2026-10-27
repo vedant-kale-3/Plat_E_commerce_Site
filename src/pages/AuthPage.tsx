@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
@@ -16,6 +17,41 @@ interface Errors {
   email?: string;
   password?: string;
   auth?: string;
+}
+
+export function formatAuthError(err: unknown): string {
+  if (!err) {
+    return 'An error occurred during authentication.';
+  }
+
+  const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+  const rawMessage =
+    typeof err === 'object' && err !== null && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+      ? (err as { message: string }).message
+      : typeof err === 'string'
+      ? err
+      : '';
+
+  const status = typeof err === 'object' && err !== null && 'status' in err ? (err as { status: unknown }).status : undefined;
+
+  if (
+    isOffline ||
+    err instanceof TypeError ||
+    status === 0 ||
+    /failed to fetch|fetch failed|load failed|network|offline/i.test(rawMessage)
+  ) {
+    return 'Network error. Please try again.';
+  }
+
+  if (/invalid login credentials/i.test(rawMessage)) {
+    return 'Invalid email or password';
+  }
+
+  if (/user already registered|already registered/i.test(rawMessage)) {
+    return 'This email already has an account. Please sign in instead.';
+  }
+
+  return rawMessage || 'An error occurred during authentication.';
 }
 
 export default function AuthPage() {
@@ -83,8 +119,8 @@ export default function AuthPage() {
         setSuccess(true);
         setTimeout(() => navigate('/'), 900);
       }
-    } catch (err: any) {
-      setErrors({ auth: err.message || 'An error occurred during authentication.' });
+    } catch (err: unknown) {
+      setErrors({ auth: formatAuthError(err) });
     } finally {
       setIsLoading(false);
     }
@@ -192,7 +228,7 @@ export default function AuthPage() {
 
           {/* Auth error banner */}
           {errors.auth && (
-            <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+            <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2" role="alert">
               <AlertCircle size={16} className="text-red-500 shrink-0" />
               <p className="text-sm text-red-600">{errors.auth}</p>
             </div>

@@ -92,10 +92,13 @@ Plat_E_commerce_Site/
 │   │   ├── CareGuidePage.tsx     # /care-guide — Plant care articles (Supabase + fallback)
 │   │   └── UnderConstruction.tsx # Reusable "coming soon" placeholder
 │   │
-│   └── data/                 # Static data & API fetchers with fallback
-│       ├── products.ts       # fallbackProducts + fetchProducts / fetchFeaturedProducts
-│       ├── mockUsers.ts      # Array of 3 mock users + findUser() helper
-│       └── careGuide.ts      # Care basics, plantGuides, troubleshooting & seasonalGuide
+│   ├── data/                 # Static data & API fetchers with fallback
+│   │   ├── products.ts       # fallbackProducts + fetchProducts / fetchFeaturedProducts
+│   │   ├── mockUsers.ts      # Array of 3 mock users + findUser() helper
+│   │   └── careGuide.ts      # Care basics, plantGuides, troubleshooting & seasonalGuide
+│   │
+│   └── utils/                # Calculation & business logic helpers
+│       └── cartCalculations.ts # Precision financial & shipping threshold calculations
 │
 ├── .env                      # Real Supabase credentials (gitignored)
 ├── .env.example              # Safe template for env vars

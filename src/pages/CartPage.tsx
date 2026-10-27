@@ -1,14 +1,34 @@
+/* eslint-disable react-refresh/only-export-components */
 import { Link } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingCart, ArrowRight, Leaf, Truck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import {
+  calculateCartTotals,
+  roundToTwoDecimals,
+  FREE_SHIPPING_THRESHOLD,
+  STANDARD_SHIPPING_FEE,
+  TAX_RATE,
+} from '../utils/cartCalculations';
+
+export {
+  calculateCartTotals,
+  roundToTwoDecimals,
+  FREE_SHIPPING_THRESHOLD,
+  STANDARD_SHIPPING_FEE,
+  TAX_RATE,
+};
+export type { CartTotals } from '../utils/cartCalculations';
 
 export default function CartPage() {
   const { cartItems, removeFromCart, updateQuantity } = useApp();
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal > 60 || cartItems.length === 0 ? 0 : 8.95;
-  const tax = subtotal * 0.08;
-  const total = subtotal + shipping + tax;
+  const {
+    subtotal,
+    shipping,
+    tax,
+    total,
+    remainingForFreeShipping,
+  } = calculateCartTotals(cartItems);
 
   if (cartItems.length === 0) {
     return (
@@ -44,17 +64,17 @@ export default function CartPage() {
         {/* Cart items */}
         <div className="flex-1 space-y-4">
           {/* Free shipping progress */}
-          {subtotal < 60 && (
+          {subtotal < FREE_SHIPPING_THRESHOLD && (
             <div className="bg-forest-50 border border-forest-200 rounded-2xl p-4 flex items-start gap-3">
               <Truck size={18} className="text-forest-600 mt-0.5 shrink-0" />
               <div className="flex-1">
                 <p className="text-sm text-forest-700 font-medium">
-                  Add <span className="font-bold">₹{(60 - subtotal).toFixed(2)}</span> more for free shipping!
+                  Add <span className="font-bold">₹{remainingForFreeShipping.toFixed(2)}</span> more for free shipping!
                 </p>
                 <div className="mt-2 h-1.5 bg-forest-200 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-forest-500 rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min((subtotal / 60) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100)}%` }}
                   />
                 </div>
               </div>
@@ -118,10 +138,10 @@ export default function CartPage() {
                     </div>
                     <div className="text-right">
                       <span className="font-bold text-forest-800 text-base">
-                        ₹{(item.price * item.quantity).toFixed(2)}
+                        ₹{roundToTwoDecimals(item.price * item.quantity).toFixed(2)}
                       </span>
                       {item.quantity > 1 && (
-                        <p className="text-xs text-gray-400">₹{item.price.toFixed(2)} each</p>
+                        <p className="text-xs text-gray-400">₹{roundToTwoDecimals(item.price).toFixed(2)} each</p>
                       )}
                     </div>
                   </div>

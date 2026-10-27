@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
 export interface Product {
@@ -19,6 +19,21 @@ export interface CartItem extends Product {
   quantity: number;
 }
 
+export interface OrderItem {
+  name: string;
+  image: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Order {
+  id: string;
+  date: string;
+  status: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  total: number;
+  items: OrderItem[];
+}
+
 export interface UserSession {
   id: string;
   name: string;
@@ -34,7 +49,7 @@ export interface UserSession {
     country: string;
   };
   joined: string;
-  orders: any[]; // We can strictly type this later when we build the orders table fully
+  orders: Order[];
 }
 
 interface AppContextType {
@@ -47,6 +62,7 @@ interface AppContextType {
   setUserSession: (session: UserSession | null) => void;
   isLoadingSession: boolean;
   logout: () => Promise<void>;
+  refreshOrders: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -57,7 +73,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoadingSession, setIsLoadingSession] = useState(true);
 
   useEffect(() => {
-    // 1. Check active session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         fetchUserProfile(session.user);
@@ -66,7 +81,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // 2. Listen for auth changes (login/logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         fetchUserProfile(session.user);
@@ -79,9 +93,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  async function fetchUserProfile(user: any) {
+  // Fetch orders for a given user from Supabase.
+  // Row Level Security on the orders table ensures auth.uid() = user_id,
+  // so every query is automatically scoped to the calling user only.
+  async function fetchUserOrders(userId: string): Promise<Order[]> {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, status, total, created_at, order_items ( name, image, price, quantity )')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Could not fetch orders:', error.message);
+        return [];
+      }
+
+      return (data ?? []).map((row) => ({
+        id: row.id as string,
+        date: new Date(row.created_at as string).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+        status: row.status as Order['status'],
+        total: row.total as number,
+        items: (row.order_items as OrderItem[]) ?? [],
+      }));
+    } catch {
+      console.warn('Unexpected error fetching orders');
+      return [];
+    }
+  }
+
+  async function fetchUserProfile(user: {
+    id: string;
+    email?: string;
+    user_metadata?: Record<string, string>;
+    created_at?: string;
+  }) {
     try {
       const metadata = user.user_metadata || {};
+      const orders = await fetchUserOrders(user.id);
 
       setUserSession({
         id: user.id,
@@ -90,17 +143,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         firstName: metadata.first_name || '',
         lastName: metadata.last_name || '',
         phone: metadata.phone || '',
-        address: {
-          street: '',
-          city: '',
-          state: '',
-          zip: '',
-          country: '',
-        },
-        joined: user.created_at 
+        address: { street: '', city: '', state: '', zip: '', country: '' },
+        joined: user.created_at
           ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
           : new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-        orders: [], // Fetching orders would go here
+        orders,
       });
     } catch {
       console.error('Failed to load user profile');
@@ -108,6 +155,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setIsLoadingSession(false);
     }
   }
+
+  // Call this after a new order is placed so ProfilePage shows it immediately
+  const refreshOrders = useCallback(async () => {
+    if (!userSession?.id) return;
+    const orders = await fetchUserOrders(userSession.id);
+    setUserSession(prev => prev ? { ...prev, orders } : null);
+  }, [userSession?.id]);
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -146,16 +200,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppContext.Provider
-      value={{ 
-        cartItems, 
-        addToCart, 
-        removeFromCart, 
-        updateQuantity, 
-        cartCount, 
-        userSession, 
+      value={{
+        cartItems,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        cartCount,
+        userSession,
         setUserSession,
         isLoadingSession,
-        logout
+        logout,
+        refreshOrders,
       }}
     >
       {children}
