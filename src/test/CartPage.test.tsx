@@ -7,9 +7,9 @@ import CartPage, {
   FREE_SHIPPING_THRESHOLD,
   STANDARD_SHIPPING_FEE,
   TAX_RATE,
-} from '../CartPage';
-import * as AppContextModule from '../../context/AppContext';
-import { CartItem } from '../../context/AppContext';
+} from '../pages/CartPage';
+import * as AppContextModule from '../context/AppContext';
+import { CartItem } from '../context/AppContext';
 
 const createMockCartItem = (overrides: Partial<CartItem>): CartItem => ({
   id: 'plant-test',

@@ -52,7 +52,12 @@ export default function CareGuidePage() {
           .eq('is_active', true)
           .order('sort_order', { ascending: true });
 
-        if (!error && data && data.length > 0) {
+        if (error) {
+          console.warn('Supabase query error for care guides; serving fallback data:', error.message);
+          return;
+        }
+
+        if (data && data.length > 0) {
           setGuides(data as CareGuide[]);
         }
       } catch (err) {
@@ -188,7 +193,7 @@ export default function CareGuidePage() {
                     </div>
 
                     <ul className="space-y-2 mb-5">
-                      {guide.tips.map(tip => (
+                      {(guide.tips || []).map(tip => (
                         <li key={tip} className="flex gap-2.5 text-sm text-gray-500 leading-relaxed">
                           <CheckCircle2 size={15} className="text-forest-400 shrink-0 mt-0.5" />
                           <span>{tip}</span>

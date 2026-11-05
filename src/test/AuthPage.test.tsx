@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import AuthPage, { formatAuthError, splitName, isValidEmail, EMAIL_REGEX } from '../AuthPage';
-import { supabase } from '../../lib/supabase';
+import AuthPage, { formatAuthError, splitName, isValidEmail, EMAIL_REGEX } from '../pages/AuthPage';
+import { supabase } from '../lib/supabase';
+import type { AuthError } from '@supabase/supabase-js';
 
 describe('Authentication & Security Boundary Exceptions - AuthPage.tsx', () => {
   beforeEach(() => {
@@ -40,7 +41,7 @@ describe('Authentication & Security Boundary Exceptions - AuthPage.tsx', () => {
           name: 'AuthApiError',
           message: 'Invalid login credentials',
           status: 400,
-        } as any,
+        } as unknown as AuthError,
       });
 
       render(
@@ -161,7 +162,7 @@ describe('Authentication & Security Boundary Exceptions - AuthPage.tsx', () => {
 
         vi.spyOn(supabase.auth, 'signInWithPassword').mockResolvedValue({
           data: { user: null, session: null },
-          error: { message: 'Fetch failed', status: 0 } as any,
+          error: { name: 'AuthRetryableFetchError', message: 'Fetch failed', status: 0 } as unknown as AuthError,
         });
 
         render(

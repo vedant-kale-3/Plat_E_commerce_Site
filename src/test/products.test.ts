@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchProducts, fallbackProducts } from '../products';
-import { supabase } from '../../lib/supabase';
+import { fetchProducts, fallbackProducts } from '../data/products';
+import { supabase } from '../lib/supabase';
 
 describe('Data Layer - products.ts exception handling', () => {
   beforeEach(() => {
@@ -21,7 +21,7 @@ describe('Data Layer - products.ts exception handling', () => {
         }),
       };
 
-      vi.spyOn(supabase, 'from').mockReturnValue(mockQuery as any);
+      vi.spyOn(supabase, 'from').mockReturnValue(mockQuery as unknown as ReturnType<typeof supabase.from>);
 
       const result = await fetchProducts();
 

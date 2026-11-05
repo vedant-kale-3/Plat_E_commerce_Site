@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import React from 'react';
-import { useApp, AppProvider, Product } from '../AppContext';
+import { useApp, AppProvider, Product } from '../context/AppContext';
 
 const mockProduct1: Product = {
   id: 'plant-1',
