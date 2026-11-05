@@ -54,6 +54,33 @@ export function formatAuthError(err: unknown): string {
   return rawMessage || 'An error occurred during authentication.';
 }
 
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== 'string') {
+    return false;
+  }
+  return EMAIL_REGEX.test(email);
+}
+
+export interface SplitNameResult {
+  firstName: string;
+  lastName: string;
+  lastNameParts: string[];
+}
+
+export function splitName(name: string): SplitNameResult {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return { firstName: '', lastName: '', lastNameParts: [] };
+  }
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  const firstName = parts[0] || '';
+  const lastNameParts = parts.slice(1);
+  const lastName = lastNameParts.join(' ');
+  return { firstName, lastName, lastNameParts };
+}
+
 export default function AuthPage() {
   const [mode, setMode] = useState<Mode>('login');
   const [form, setForm] = useState<FormState>({ name: '', email: '', password: '' });
@@ -68,7 +95,7 @@ export default function AuthPage() {
     if (mode === 'register' && !form.name.trim()) {
       newErrors.name = 'Full name is required.';
     }
-    if (!form.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    if (!isValidEmail(form.email)) {
       newErrors.email = 'Enter a valid email address.';
     }
     if (form.password.length === 0) {
@@ -99,8 +126,7 @@ export default function AuthPage() {
         setSuccess(true);
         setTimeout(() => navigate('/'), 900);
       } else {
-        const [firstName, ...lastNameParts] = form.name.split(' ');
-        const lastName = lastNameParts.join(' ');
+        const { firstName, lastName } = splitName(form.name);
 
         const { error } = await supabase.auth.signUp({
           email: form.email,
@@ -235,7 +261,7 @@ export default function AuthPage() {
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {mode === 'register' && (
               <div>
                 <label className="block text-sm font-medium text-forest-700 mb-1.5">Full Name</label>
