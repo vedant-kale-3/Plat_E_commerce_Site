@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import StarRating, { clampRating } from '../components/StarRating';
 import CareGuidePage from '../pages/CareGuidePage';
 import ProductCard from '../components/ProductCard';
 import ProfilePage from '../pages/ProfilePage';
+import ShopPage from '../pages/ShopPage';
 import { plantGuides } from '../data/careGuide';
+import { fallbackProducts } from '../data/products';
+import * as productsModule from '../data/products';
 import { supabase } from '../lib/supabase';
 import * as AppContextModule from '../context/AppContext';
 import type { UserSession } from '../context/AppContext';
@@ -347,6 +350,232 @@ describe('Component Rendering & UI Hydration Exceptions - Components.test.tsx', 
 
       expect(screen.getByText("You're not signed in")).toBeInTheDocument();
       expect(screen.queryByText('Alice Green')).not.toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // EX-CMP-04: ProfilePage — authenticated user with empty orders array
+  // ---------------------------------------------------------------------------
+  describe('EX-CMP-04: ProfilePage shows "No orders yet" when user is logged in with orders: []', () => {
+    const emptyOrderSession: UserSession = {
+      id: 'user-42',
+      name: 'Bob Plant',
+      email: 'bob@example.com',
+      firstName: 'Bob',
+      lastName: 'Plant',
+      phone: '555-0100',
+      address: { street: '123 Fern Ave', city: 'Portland', state: 'OR', zip: '97201', country: 'USA' },
+      joined: 'March 2025',
+      orders: [],
+    };
+
+    function renderProfileWithEmptyOrders() {
+      vi.spyOn(AppContextModule, 'useApp').mockReturnValue({
+        addToCart: vi.fn(),
+        removeFromCart: vi.fn(),
+        updateQuantity: vi.fn(),
+        cartItems: [],
+        cartCount: 0,
+        userSession: emptyOrderSession,
+        setUserSession: vi.fn(),
+        isLoadingSession: false,
+        logout: vi.fn(),
+        refreshOrders: vi.fn(),
+      });
+      return render(
+        <MemoryRouter>
+          <ProfilePage />
+        </MemoryRouter>
+      );
+    }
+
+    it('renders the "No orders yet" message instead of an order list', () => {
+      renderProfileWithEmptyOrders();
+      expect(screen.getByText('No orders yet')).toBeInTheDocument();
+      expect(screen.getByText('Your past purchases will appear here.')).toBeInTheDocument();
+    });
+
+    it('shows Profile Details and Order History section headings for a logged-in user', () => {
+      renderProfileWithEmptyOrders();
+      expect(screen.getByText('Profile Details')).toBeInTheDocument();
+      expect(screen.getByText('Order History')).toBeInTheDocument();
+    });
+
+    it('shows "0 orders" count badge', () => {
+      renderProfileWithEmptyOrders();
+      expect(screen.getByText('0 orders')).toBeInTheDocument();
+    });
+
+    it('does not crash mapping over an empty items array and renders user details correctly', () => {
+      expect(() => renderProfileWithEmptyOrders()).not.toThrow();
+      expect(screen.getByText('Bob Plant')).toBeInTheDocument();
+      expect(screen.getByText('bob@example.com')).toBeInTheDocument();
+    });
+
+    it('renders the order list when orders are present without crashing', () => {
+      const sessionWithOrders: UserSession = {
+        ...emptyOrderSession,
+        orders: [
+          {
+            id: 'ORD-001',
+            date: 'Nov 15, 2025',
+            status: 'Delivered',
+            total: 64.97,
+            items: [
+              { name: 'Monstera', image: '/m.jpg', quantity: 1, price: 49.99 },
+              { name: 'Pothos', image: '/p.jpg', quantity: 1, price: 14.98 },
+            ],
+          },
+        ],
+      };
+
+      vi.spyOn(AppContextModule, 'useApp').mockReturnValue({
+        addToCart: vi.fn(),
+        removeFromCart: vi.fn(),
+        updateQuantity: vi.fn(),
+        cartItems: [],
+        cartCount: 0,
+        userSession: sessionWithOrders,
+        setUserSession: vi.fn(),
+        isLoadingSession: false,
+        logout: vi.fn(),
+        refreshOrders: vi.fn(),
+      });
+
+      render(
+        <MemoryRouter>
+          <ProfilePage />
+        </MemoryRouter>
+      );
+
+      // Order details render
+      expect(screen.getByText('#ORD-001')).toBeInTheDocument();
+      expect(screen.getByText('Delivered')).toBeInTheDocument();
+      expect(screen.getByText('Monstera')).toBeInTheDocument();
+      expect(screen.getByText('Pothos')).toBeInTheDocument();
+      // "No orders yet" should NOT appear
+      expect(screen.queryByText('No orders yet')).not.toBeInTheDocument();
+      expect(screen.getByText('1 order')).toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // EX-PAGE-02: ShopPage — fetchProducts resolves with fallback data due to DB timeout
+  // ---------------------------------------------------------------------------
+  describe('EX-PAGE-02: ShopPage renders fallback products when fetchProducts falls back due to DB timeout', () => {
+    function renderShopWithFallback() {
+      // Mock fetchProducts to resolve with fallbackProducts (simulating DB timeout fallback)
+      vi.spyOn(productsModule, 'fetchProducts').mockResolvedValue(fallbackProducts);
+
+      // Mock useApp for ProductCard's addToCart
+      vi.spyOn(AppContextModule, 'useApp').mockReturnValue({
+        addToCart: vi.fn(),
+        removeFromCart: vi.fn(),
+        updateQuantity: vi.fn(),
+        cartItems: [],
+        cartCount: 0,
+        userSession: null,
+        setUserSession: vi.fn(),
+        isLoadingSession: false,
+        logout: vi.fn(),
+        refreshOrders: vi.fn(),
+      });
+
+      return render(
+        <MemoryRouter>
+          <ShopPage />
+        </MemoryRouter>
+      );
+    }
+
+    it('renders all 10 fallback products in the shop grid', async () => {
+      renderShopWithFallback();
+
+      await waitFor(() => {
+        expect(screen.getByText('10 plants available')).toBeInTheDocument();
+      });
+
+      // Verify each fallback product name appears
+      for (const product of fallbackProducts) {
+        expect(screen.getByText(product.name)).toBeInTheDocument();
+      }
+    });
+
+    it('displays the "Browse All Plants" heading when no search is active', async () => {
+      renderShopWithFallback();
+
+      await waitFor(() => {
+        expect(screen.getByText('Browse All Plants')).toBeInTheDocument();
+      });
+    });
+
+    it('light filter narrows products correctly from fallback data', async () => {
+      renderShopWithFallback();
+
+      await waitFor(() => {
+        expect(screen.getByText('10 plants available')).toBeInTheDocument();
+      });
+
+      // Click "Low Light" filter
+      const lowLightBtn = screen.getAllByText('Low Light').find(
+        el => el.tagName === 'BUTTON'
+      );
+      expect(lowLightBtn).toBeDefined();
+      fireEvent.click(lowLightBtn!);
+
+      // Count how many fallback products are Low Light
+      const lowLightProducts = fallbackProducts.filter(p => p.light === 'Low Light');
+      await waitFor(() => {
+        expect(
+          screen.getByText(`${lowLightProducts.length} plant${lowLightProducts.length !== 1 ? 's' : ''} available`)
+        ).toBeInTheDocument();
+      });
+
+      // Each Low Light product should be visible
+      for (const product of lowLightProducts) {
+        expect(screen.getByText(product.name)).toBeInTheDocument();
+      }
+    });
+
+    it('size filter narrows products correctly from fallback data', async () => {
+      renderShopWithFallback();
+
+      await waitFor(() => {
+        expect(screen.getByText('10 plants available')).toBeInTheDocument();
+      });
+
+      // Click "Small" size filter
+      const smallBtn = screen.getAllByText('Small').find(
+        el => el.tagName === 'BUTTON'
+      );
+      expect(smallBtn).toBeDefined();
+      fireEvent.click(smallBtn!);
+
+      const smallProducts = fallbackProducts.filter(p => p.size === 'Small');
+      await waitFor(() => {
+        expect(
+          screen.getByText(`${smallProducts.length} plant${smallProducts.length !== 1 ? 's' : ''} available`)
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('price filter narrows products correctly from fallback data', async () => {
+      renderShopWithFallback();
+
+      await waitFor(() => {
+        expect(screen.getByText('10 plants available')).toBeInTheDocument();
+      });
+
+      // Click "Under ₹25" price filter
+      const under25Btn = screen.getByText('Under ₹25');
+      fireEvent.click(under25Btn);
+
+      const cheapProducts = fallbackProducts.filter(p => p.price >= 0 && p.price <= 25);
+      await waitFor(() => {
+        expect(
+          screen.getByText(`${cheapProducts.length} plant${cheapProducts.length !== 1 ? 's' : ''} available`)
+        ).toBeInTheDocument();
+      });
     });
   });
 });
