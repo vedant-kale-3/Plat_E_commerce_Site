@@ -3,8 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import StarRating, { clampRating } from '../components/StarRating';
 import CareGuidePage from '../pages/CareGuidePage';
+import ProductCard from '../components/ProductCard';
+import ProfilePage from '../pages/ProfilePage';
 import { plantGuides } from '../data/careGuide';
 import { supabase } from '../lib/supabase';
+import * as AppContextModule from '../context/AppContext';
+import type { UserSession } from '../context/AppContext';
 
 describe('Component Rendering & UI Hydration Exceptions - Components.test.tsx', () => {
   beforeEach(() => {
@@ -171,6 +175,178 @@ describe('Component Rendering & UI Hydration Exceptions - Components.test.tsx', 
       plantGuides.forEach(guide => {
         expect(screen.getAllByText(`${guide.category} Plants`).length).toBeGreaterThan(0);
       });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // EX-CMP-02: ProductCard — null / undefined product.tag
+  // ---------------------------------------------------------------------------
+  describe('EX-CMP-02: ProductCard does not render tag badge when product.tag is null or undefined', () => {
+    const baseProduct = {
+      id: 'plant-test-1',
+      name: 'Peace Lily',
+      price: 39.99,
+      image: '/peace-lily.jpg',
+      category: 'Tropical',
+      light: 'Low Light' as const,
+      size: 'Medium' as const,
+      rating: 4.3,
+      review_count: 72,
+      description: 'An elegant, low-light tolerant plant.',
+    };
+
+    function renderCard(product: typeof baseProduct & { tag?: string | null }) {
+      vi.spyOn(AppContextModule, 'useApp').mockReturnValue({
+        addToCart: vi.fn(),
+        removeFromCart: vi.fn(),
+        updateQuantity: vi.fn(),
+        cartItems: [],
+        cartCount: 0,
+        userSession: null,
+        setUserSession: vi.fn(),
+        isLoadingSession: false,
+        logout: vi.fn(),
+        refreshOrders: vi.fn(),
+      });
+      return render(
+        <MemoryRouter>
+          <ProductCard product={product} />
+        </MemoryRouter>
+      );
+    }
+
+    it('does not render a tag badge when product.tag is null', () => {
+      renderCard({ ...baseProduct, tag: null });
+      // The tag badge should not be in the DOM at all
+      expect(screen.queryByText('Best Seller')).not.toBeInTheDocument();
+      expect(screen.queryByText('Sale')).not.toBeInTheDocument();
+      // But the product name and size badge must still render
+      expect(screen.getByText('Peace Lily')).toBeInTheDocument();
+      expect(screen.getByText('Medium')).toBeInTheDocument();
+    });
+
+    it('does not render a tag badge when product.tag is undefined', () => {
+      renderCard({ ...baseProduct, tag: undefined });
+      expect(screen.queryByText('Best Seller')).not.toBeInTheDocument();
+      // Product content still intact
+      expect(screen.getByText('Peace Lily')).toBeInTheDocument();
+      expect(screen.getByText('Medium')).toBeInTheDocument();
+    });
+
+    it('renders the tag badge when product.tag is a non-empty string', () => {
+      renderCard({ ...baseProduct, tag: 'Best Seller' });
+      expect(screen.getByText('Best Seller')).toBeInTheDocument();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // EX-CMP-03: ProfilePage — unauthenticated (userSession === null)
+  // ---------------------------------------------------------------------------
+  describe('EX-CMP-03: ProfilePage renders login CTA when userSession is null and never crashes', () => {
+    function renderProfileUnauthenticated() {
+      vi.spyOn(AppContextModule, 'useApp').mockReturnValue({
+        addToCart: vi.fn(),
+        removeFromCart: vi.fn(),
+        updateQuantity: vi.fn(),
+        cartItems: [],
+        cartCount: 0,
+        userSession: null,
+        setUserSession: vi.fn(),
+        isLoadingSession: false,
+        logout: vi.fn(),
+        refreshOrders: vi.fn(),
+      });
+      return render(
+        <MemoryRouter>
+          <ProfilePage />
+        </MemoryRouter>
+      );
+    }
+
+    it('renders the sign-in CTA when userSession is null without throwing', () => {
+      renderProfileUnauthenticated();
+      expect(screen.getByText("You're not signed in")).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    });
+
+    it('does not render the profile details or order history sections when unauthenticated', () => {
+      renderProfileUnauthenticated();
+      expect(screen.queryByText('Profile Details')).not.toBeInTheDocument();
+      expect(screen.queryByText('Order History')).not.toBeInTheDocument();
+    });
+
+    it('does not attempt to access userSession.name or any property on null — no TypeError thrown', () => {
+      // If the component tried to access userSession.name when null, React would throw during render
+      expect(() => renderProfileUnauthenticated()).not.toThrow();
+    });
+
+    it('renders a valid sign-in link / button that navigates toward /auth', () => {
+      renderProfileUnauthenticated();
+      const signInBtn = screen.getByRole('button', { name: /sign in/i });
+      expect(signInBtn).toBeInTheDocument();
+      // Confirm it is interactive (not disabled)
+      expect(signInBtn).not.toBeDisabled();
+    });
+
+    it('renders correctly when userSession transitions from non-null to null (sign-out scenario)', () => {
+      const mockSession: UserSession = {
+        id: 'user-99',
+        name: 'Alice Green',
+        email: 'alice@example.com',
+        firstName: 'Alice',
+        lastName: 'Green',
+        phone: '',
+        address: { street: '', city: '', state: '', zip: '', country: '' },
+        joined: 'January 2025',
+        orders: [],
+      };
+
+      const mockUseApp = vi.spyOn(AppContextModule, 'useApp');
+
+      // First render: authenticated
+      mockUseApp.mockReturnValue({
+        addToCart: vi.fn(),
+        removeFromCart: vi.fn(),
+        updateQuantity: vi.fn(),
+        cartItems: [],
+        cartCount: 0,
+        userSession: mockSession,
+        setUserSession: vi.fn(),
+        isLoadingSession: false,
+        logout: vi.fn(),
+        refreshOrders: vi.fn(),
+      });
+
+      const { rerender } = render(
+        <MemoryRouter>
+          <ProfilePage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText('Alice Green')).toBeInTheDocument();
+
+      // Simulate sign-out: userSession → null
+      mockUseApp.mockReturnValue({
+        addToCart: vi.fn(),
+        removeFromCart: vi.fn(),
+        updateQuantity: vi.fn(),
+        cartItems: [],
+        cartCount: 0,
+        userSession: null,
+        setUserSession: vi.fn(),
+        isLoadingSession: false,
+        logout: vi.fn(),
+        refreshOrders: vi.fn(),
+      });
+
+      rerender(
+        <MemoryRouter>
+          <ProfilePage />
+        </MemoryRouter>
+      );
+
+      expect(screen.getByText("You're not signed in")).toBeInTheDocument();
+      expect(screen.queryByText('Alice Green')).not.toBeInTheDocument();
     });
   });
 });
